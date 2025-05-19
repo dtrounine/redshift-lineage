@@ -9,6 +9,7 @@ build/
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.idea
 *.iws
 *.iml
 *.ipr
@@ -45,3 +46,4 @@ bin/
 src/main/gen
 src/main/antlr/**/gen
 src/main/antlr/**/*.tokens
+*.sql

@@ -1,0 +1,34 @@
+package io.github.dtrounine.lineage.util
+
+import io.github.dtrounine.lineage.LineageInfo
+
+fun mergeLineage(left: Map<String, Set<String>>, right: Map<String, Set<String>>): Map<String, Set<String>> {
+    val merged: MutableMap<String, Set<String>> = mutableMapOf()
+
+    for ((key, value) in left) {
+        merged[key] = value.toMutableSet()
+    }
+
+    for ((key, value) in right) {
+        merged.merge(key, value.toMutableSet()) { oldValue, newValue -> oldValue union newValue }
+    }
+
+    return merged
+}
+
+fun LineageInfo.merge(other: LineageInfo): LineageInfo = LineageInfo(
+    lineage = mergeLineage(this.lineage, other.lineage),
+    sources = this.sources union other.sources
+)
+
+fun LineageInfo.println() {
+    println("LineageInfo:")
+    println("  lineage:")
+    for ((key, value) in lineage) {
+        println("    - $key -> ${ value.joinToString(", ")}")
+    }
+    println("  sources:")
+    for (source in sources) {
+        println("    - $source")
+    }
+}

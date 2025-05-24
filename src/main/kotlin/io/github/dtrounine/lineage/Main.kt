@@ -1,47 +1,80 @@
 package io.github.dtrounine.lineage
 
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.choice
+import io.github.dtrounine.lineage.output.LineageOutputWriter
 import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlLexer
 import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlParser
 import io.github.dtrounine.lineage.sql.ast.AstParser
-import io.github.dtrounine.lineage.util.println
+import io.github.dtrounine.lineage.sql.ast.Ast_Statement
 import org.antlr.v4.kotlinruntime.CharStreams
 import org.antlr.v4.kotlinruntime.CommonTokenStream
-import org.antlr.v4.kotlinruntime.ast.Point
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 
-fun main() {
-    val srcFile = File("src/test/resources/test-1.sql")
 
-    logTokens(srcFile, stopPosition = Point(7, 30))
+class RedLinCli: CliktCommand(
+    name = "redshift-lineage",
+    help = "Redshift SQL lineage extractor",
+    printHelpOnEmptyArgs = false) {
 
-    val charStream = CharStreams.fromPath(srcFile.toPath())
+    private val outFile: File? by
+        option(
+            names = arrayOf("--out-file"),
+            help = "Pathname of the output file. Stdout by default."
+        ).convert {
+            File(it)
+        }
+
+    private val inFile: File? by
+        option(
+            names = arrayOf("--in-file"),
+            help = "Pathname of the input file. Stdin by default."
+        ).convert {
+            File(it)
+        }
+
+    private val outFormat: String by
+        option(
+            names = arrayOf("--out-format"),
+            help = "Output format. Default is json."
+        ).choice(
+            "json", "openlineage"
+        ).default("json")
+
+    override fun run() {
+        getInputStream(inFile).use { inputStream ->
+            getOutputStream(outFile).use { outputStream ->
+                val statements = parseInput(inputStream)
+                val lineageData = TableLineageExtractor().getLineage(statements)
+                LineageOutputWriter(outFormat).write(lineageData, outputStream)
+            }
+        }
+    }
+}
+
+private fun getInputStream(inputFile: File?): InputStream {
+    return inputFile?.inputStream() ?: System.`in`
+}
+
+private fun getOutputStream(outputFile: File?): OutputStream {
+    return outputFile?.outputStream() ?: System.out
+}
+
+private fun parseInput(inputStream: InputStream): List<Ast_Statement> {
+    val charStream = CharStreams.fromStream(inputStream)
     val lexer = RedshiftSqlLexer(charStream)
     val tokens = CommonTokenStream(lexer)
     val parser = RedshiftSqlParser(tokens)
     parser.buildParseTree = true
 
     val root: RedshiftSqlParser.RootContext = parser.root()
-
     val statements = AstParser().parseRoot(root)
-    statements.forEach { statement ->
-        println("Parsed statement: $statement")
-    }
-
-    val lineageInfo = TableLineageExtractor().getLineage(statements)
-    lineageInfo.println()
+    return statements
 }
 
-fun logTokens(srcFile: File, stopPosition: Point?) {
-    val charStream = CharStreams.fromPath(srcFile.toPath())
-    val lexer = RedshiftSqlLexer(charStream)
-    val tokens = CommonTokenStream(lexer)
-    tokens.fill()
-    for (token in tokens.tokens) {
-        if (stopPosition != null
-            && (token.line > stopPosition.line || token.line == stopPosition.line && token.charPositionInLine > stopPosition.column)) {
-            break
-        }
-        token.line
-        println("${lexer.vocabulary.getSymbolicName(token.type)}: ${token.text}")
-    }
-}
+fun main(arg: Array<String>) = RedLinCli().main(arg)

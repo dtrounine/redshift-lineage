@@ -1,7 +1,7 @@
 val antlrKotlinVersion = "1.0.1"
 
 plugins {
-    kotlin("jvm") version "1.9.21"
+    kotlin("jvm") version "1.9.22"
     application
     id("com.google.cloud.artifactregistry.gradle-plugin") version "2.2.1"
     id("com.strumenta.antlr-kotlin") version "1.0.1"
@@ -10,6 +10,7 @@ plugins {
     id("net.researchgate.release") version "3.1.0"
     // Used to create a GitHub release with the artifacts
     id("com.github.breadmoirai.github-release") version "2.4.1"
+    kotlin("plugin.serialization") version "1.9.22"
 }
 
 group = "io.github.dtrounine.lineage"
@@ -22,6 +23,10 @@ repositories {
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     implementation("com.strumenta:antlr-kotlin-runtime:$antlrKotlinVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("io.openlineage:openlineage-java:1.33.0")
+    implementation("org.slf4j:slf4j-simple:1.6.2")
+    implementation("com.github.ajalt.clikt:clikt:4.4.0")
 }
 
 sourceSets {

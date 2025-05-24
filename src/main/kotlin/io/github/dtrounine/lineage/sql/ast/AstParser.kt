@@ -19,6 +19,8 @@ class AstParser {
     fun parseStatement(stmtContext: RedshiftSqlParser.StmtContext): Ast_Statement? {
         when (stmtContext) {
             is RedshiftSqlParser.SelectStatementContext -> return parseSelectStatement(stmtContext.selectstmt())
+            is RedshiftSqlParser.DropStatementContext -> return parseDropStatement(stmtContext.dropstmt())
+            is RedshiftSqlParser.InsertStatementContext -> return parseInsertStatement(stmtContext.insertstmt())
             // Add other statement types here
             else -> {
                 println("Unsupported statement type: ${stmtContext.javaClass.simpleName}")
@@ -129,18 +131,35 @@ class AstParser {
         return modifierType
     }
 
-    fun parseSimpleSelect(simpleSelectContext: RedshiftSqlParser.Simple_selectContext): Ast_SimpleSelectClause {
-        val isDistinct = simpleSelectContext.distinct_clause() != null
-        val targets = simpleSelectContext.target_list()!!.target_el().map { targetElContext ->
+    fun parseSimpleSelect(simpleSelectContext: RedshiftSqlParser.Simple_selectContext): Ast_SelectClause {
+        return when (simpleSelectContext) {
+            is RedshiftSqlParser.StandardSimpleSelectContext -> parseStandardSelect(simpleSelectContext)
+            is RedshiftSqlParser.ValuesSimpleSelectContext -> parseValuesSelect(simpleSelectContext)
+            else -> throw IllegalArgumentException("Unknown simple select type: ${simpleSelectContext.javaClass.simpleName}")
+        }
+    }
+
+    fun parseStandardSelect(selectContext: RedshiftSqlParser.StandardSimpleSelectContext): Ast_CoreSelectClause {
+        val isDistinct = selectContext.distinct_clause() != null
+        val targets = selectContext.target_list()!!.target_el().map { targetElContext ->
             when (targetElContext) {
                 is RedshiftSqlParser.Target_starContext -> Ast_StarSelectTarget(targetElContext)
                 is RedshiftSqlParser.Target_labelContext -> parseTargetLabelContext(targetElContext)
                 else -> throw IllegalArgumentException("Unknown select target type: ${targetElContext.javaClass.simpleName}")
             }
         }
-        val from: Ast_From? = simpleSelectContext.from_clause()?.let { parseFromClause(it) }
-        val into: Ast_OptTempTableName? = simpleSelectContext.into_clause()?.let { parseIntoClause(it) }
-        return Ast_SimpleSelectClause(simpleSelectContext, isDistinct, targets, from, into)
+        val from: Ast_From? = selectContext.from_clause()?.let { parseFromClause(it) }
+        val into: Ast_OptTempTableName? = selectContext.into_clause()?.let { parseIntoClause(it) }
+        return Ast_CoreSelectClause(selectContext, isDistinct, targets, from, into)
+    }
+
+    fun parseValuesSelect(valuesContext: RedshiftSqlParser.ValuesSimpleSelectContext): Ast_ValuesSelectClause {
+        val valuesList = valuesContext.values_clause().expr_list().map { exprListContext ->
+            exprListContext.a_expr().map { exprContext ->
+                parseExpression(exprContext)
+            }
+        }
+        return Ast_ValuesSelectClause(valuesContext, valuesList)
     }
 
     fun parseTargetLabelContext(targetLabelcontext: RedshiftSqlParser.Target_labelContext): Ast_ColumnSelectTarget {
@@ -248,5 +267,37 @@ class AstParser {
             tableFqn,
             isTemporary
         )
+    }
+
+    fun parseDropStatement(dropStatementContext: RedshiftSqlParser.DropstmtContext): Ast_DropStatement {
+        val ifExists = dropStatementContext.EXISTS() != null
+        val dropBehavior: DropBehavior? = dropStatementContext.drop_behavior_()?.let { dropBehaviorContext ->
+            when (dropBehaviorContext.text.uppercase()) {
+                "CASCADE" -> DropBehavior.CASCADE
+                "RESTRICT" -> DropBehavior.RESTRICT
+                else -> throw IllegalArgumentException("Unknown drop behavior: ${dropBehaviorContext.text}")
+            }
+        }
+        val names = dropStatementContext.any_name_list_().any_name().map { it.text }
+        return Ast_DropStatement(dropStatementContext, names, ifExists, dropBehavior)
+    }
+
+    fun parseInsertStatement(insertStmntContext: RedshiftSqlParser.InsertstmtContext): Ast_InsertStatement {
+        val with: List<Ast_Cte> = insertStmntContext.with_clause()?.let { parseWithClause(it) } ?: emptyList()
+        val into: Ast_InsertTarget = parseInsertTarget(insertStmntContext.insert_target())
+        val selectStatement = parseSelectStatement(insertStmntContext.insert_rest().selectstmt())
+        return Ast_InsertStatement(
+            insertStmntContext,
+            with,
+            into,
+            selectStatement
+        )
+    }
+
+    fun parseInsertTarget(insertTargetContext: RedshiftSqlParser.Insert_targetContext): Ast_InsertTarget {
+        val tableFqn = insertTargetContext.qualified_name().text
+        val alias = insertTargetContext.colid()?.text
+        val columns = insertTargetContext.target_columns()?.colid()?.map { it.text }
+        return Ast_InsertTarget(insertTargetContext, tableFqn, alias, columns)
     }
 }

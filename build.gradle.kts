@@ -22,6 +22,8 @@ repositories {
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation(kotlin("test"))
+
     implementation("com.strumenta:antlr-kotlin-runtime:$antlrKotlinVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("io.openlineage:openlineage-java:1.33.0")

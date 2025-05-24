@@ -6,7 +6,7 @@ package io.github.dtrounine.lineage.model
  */
 data class LineageData(
     /**
-     * Map of sinks to their sources.
+     * Map of sinks to their sources (sources may be empty).
      */
     val lineage: Map<String, Set<String>>,
 

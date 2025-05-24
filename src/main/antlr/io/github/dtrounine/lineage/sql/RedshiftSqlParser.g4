@@ -183,7 +183,11 @@ insertstmt
     ;
 
 insert_target
-    : qualified_name (AS colid)?
+    : qualified_name (AS colid)? target_columns?
+    ;
+
+target_columns
+    : OPEN_PAREN colid ( COMMA colid )* CLOSE_PAREN
     ;
 
 insert_rest
@@ -813,7 +817,7 @@ simple_select
 		    where_clause?
 		    group_clause?
 		    having_clause?
-		    window_clause?
+		    window_clause?          # StandardSimpleSelect
 //    | (
 //        SELECT
 //      	( all_clause_? target_list?
@@ -824,7 +828,7 @@ simple_select
 //      		group_clause? having_clause? window_clause?
 //        )
 //      )
-    | values_clause
+    | values_clause                 # ValuesSimpleSelect
 //    | TABLE relation_expr
 //    | select_with_parens
     ;

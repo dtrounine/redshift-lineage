@@ -18,6 +18,7 @@ class TableLineageExtractor {
     fun getLineage(statement: Ast_Statement): LineageData {
         return when (statement) {
             is Ast_SelectStatement -> getSelectLineage(statement)
+            is Ast_InsertStatement -> getInsertLineage(statement)
             else -> LineageData.newEmpty()
         }
     }
@@ -35,11 +36,12 @@ class TableLineageExtractor {
                 // TODO: verify schema compatibility for duplicate keys
                 left.merge(right)
             }
-            is Ast_SimpleSelectClause ->  getSimpleSelectLineage(select)
+            is Ast_CoreSelectClause ->  getSimpleSelectLineage(select)
+            is Ast_ValuesSelectClause -> LineageData.newEmpty() // Values clause does not have lineage
         }
     }
 
-    private fun getSimpleSelectLineage(select: Ast_SimpleSelectClause): LineageData {
+    private fun getSimpleSelectLineage(select: Ast_CoreSelectClause): LineageData {
         val fromLineage = select.from?.let { getLineage(it) } ?: LineageData.newEmpty()
 
         return select.into?.let {
@@ -88,6 +90,16 @@ class TableLineageExtractor {
                 return getLineage(simpleFrom.from)
             }
         }
+    }
+
+    private fun getInsertLineage(insert: Ast_InsertStatement): LineageData {
+        val targetTable = insert.into.targetFqn
+        val sourcesLineage = getSelectLineage(insert.selectStatement)
+        val rawInsertLineage = LineageData(
+            lineage = mapOf(targetTable to sourcesLineage.sources),
+            sources = emptySet()
+        )
+        return rawInsertLineage.merge(sourcesLineage)
     }
 
 }

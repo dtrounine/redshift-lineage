@@ -10,6 +10,7 @@ import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlLexer
 import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlParser
 import io.github.dtrounine.lineage.sql.ast.AstParser
 import io.github.dtrounine.lineage.sql.ast.Ast_Statement
+import io.github.dtrounine.lineage.sql.parseRedshiftSqlToAst
 import org.antlr.v4.kotlinruntime.CharStreams
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import java.io.File
@@ -49,7 +50,7 @@ class RedLinCli: CliktCommand(
     override fun run() {
         getInputStream(inFile).use { inputStream ->
             getOutputStream(outFile).use { outputStream ->
-                val statements = parseInput(inputStream)
+                val statements = parseRedshiftSqlToAst(inputStream)
                 val lineageData = TableLineageExtractor().getLineage(statements)
                 LineageOutputWriter(outFormat).write(lineageData, outputStream)
             }
@@ -63,18 +64,6 @@ private fun getInputStream(inputFile: File?): InputStream {
 
 private fun getOutputStream(outputFile: File?): OutputStream {
     return outputFile?.outputStream() ?: System.out
-}
-
-private fun parseInput(inputStream: InputStream): List<Ast_Statement> {
-    val charStream = CharStreams.fromStream(inputStream)
-    val lexer = RedshiftSqlLexer(charStream)
-    val tokens = CommonTokenStream(lexer)
-    val parser = RedshiftSqlParser(tokens)
-    parser.buildParseTree = true
-
-    val root: RedshiftSqlParser.RootContext = parser.root()
-    val statements = AstParser().parseRoot(root)
-    return statements
 }
 
 fun main(arg: Array<String>) = RedLinCli().main(arg)

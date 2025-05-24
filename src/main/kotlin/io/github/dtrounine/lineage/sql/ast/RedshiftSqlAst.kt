@@ -44,12 +44,35 @@ data class Ast_CombineSelectClause(
 ): Ast_SelectClause(context)
 
 
-data class Ast_SimpleSelectClause(
+/**
+ * Represents the most common core SELECT clause in SQL.
+ *
+ * SELECT DISTINCT
+ *      target1, target2, ...
+ * INTO sink_table
+ * FROM source_table
+ *      JOIN other_table ON condition
+ *      JOIN another_table USING (column1, column2)
+ * WHERE condition
+ */
+data class Ast_CoreSelectClause(
     override val context: ParserRuleContext,
     val isDistinct: Boolean,
     val targets: List<Ast_SelectTarget>,
     val from: Ast_From?,
     val into: Ast_OptTempTableName?
+    // TODO: add WHERE clause, GROUP BY, HAVING, WINDOW etc.
+): Ast_SelectClause(context)
+
+/**
+ * Represents a VALUES clause in SQL.
+ * Note: grammatically, it is a SELECT clause.
+ *
+ * VALUES (value1, value2, ...), (value3, value4, ...)
+ */
+data class Ast_ValuesSelectClause(
+    override val context: ParserRuleContext,
+    val values: List<List<Ast_Expression>>
 ): Ast_SelectClause(context)
 
 sealed class Ast_SelectTarget(override val context: ParserRuleContext) : Ast_Node(context)
@@ -173,3 +196,29 @@ data class Ast_OptTempTableName(
 ): Ast_Expression(context)
 
 open class Ast_Expression(override val context: ParserRuleContext) : Ast_Node(context)
+
+enum class DropBehavior {
+    RESTRICT,
+    CASCADE
+}
+
+data class Ast_DropStatement(
+    override val context: ParserRuleContext,
+    val names: List<String>,
+    val ifExists: Boolean,
+    val dropBehavior: DropBehavior? = null
+): Ast_Statement(context)
+
+data class Ast_InsertStatement(
+    override val context: ParserRuleContext,
+    val with: List<Ast_Cte>,
+    val into: Ast_InsertTarget,
+    val selectStatement: Ast_SelectStatement
+): Ast_Statement(context)
+
+data class Ast_InsertTarget(
+    override val context: ParserRuleContext,
+    val targetFqn: String,
+    val alias: String?,
+    val columns: List<String>?
+): Ast_Node(context)

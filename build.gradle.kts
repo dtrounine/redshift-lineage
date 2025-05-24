@@ -73,6 +73,10 @@ githubRelease {
     dryRun.set(false) // by default false; you can use this to see what actions would be taken without making a release
 }
 
+tasks.named("compileKotlin") {
+    dependsOn(generateKotlinGrammarSource)
+}
+
 tasks.named("githubRelease") {
     dependsOn("distZip") // Ensure the project is built before tagging
 }

@@ -16,7 +16,7 @@ class AstParser {
         return statements
     }
 
-    fun parseStatement(stmtContext: RedshiftSqlParser.StmtContext): Ast_Statement? {
+    private fun parseStatement(stmtContext: RedshiftSqlParser.StmtContext): Ast_Statement? {
         when (stmtContext) {
             is RedshiftSqlParser.SelectStatementContext -> return parseSelectStatement(stmtContext.selectstmt())
             is RedshiftSqlParser.DropStatementContext -> return parseDropStatement(stmtContext.dropstmt())
@@ -30,15 +30,15 @@ class AstParser {
         }
     }
 
-    fun parseSelectStatement(selectstmtContext: RedshiftSqlParser.SelectstmtContext): Ast_SelectStatement {
+    private fun parseSelectStatement(selectstmtContext: RedshiftSqlParser.SelectstmtContext): Ast_SelectStatement {
         selectstmtContext.select_no_parens()?.let {
             return parseSelectStatementNoParentheses(it)
         }
         val selectParens = selectstmtContext.select_with_parens()!!
-        return parseSelectStatemantWithParantheses(selectParens)
+        return parseSelectStatementWithParentheses(selectParens)
     }
 
-    fun parseSelectStatemantWithParantheses(selectContext: RedshiftSqlParser.Select_with_parensContext): Ast_SelectStatement {
+    private fun parseSelectStatementWithParentheses(selectContext: RedshiftSqlParser.Select_with_parensContext): Ast_SelectStatement {
         var selectParens = selectContext
         while (true) {
             when (selectParens) {
@@ -52,7 +52,7 @@ class AstParser {
         }
     }
 
-    fun parseSelectStatementNoParentheses(selectContext: RedshiftSqlParser.Select_no_parensContext): Ast_SelectStatement {
+    private fun parseSelectStatementNoParentheses(selectContext: RedshiftSqlParser.Select_no_parensContext): Ast_SelectStatement {
         val selectClause: Ast_SelectClause = parseSelectClause(selectContext.select_clause())
         val with: List<Ast_Cte> = selectContext.with_clause()?.let { parseWithClause(it) } ?: emptyList()
         val sortClause: Ast_SortClause? = selectContext.sort_clause()?.let { parseSortClause(it) }
@@ -64,14 +64,14 @@ class AstParser {
         )
     }
 
-    fun parseWithClause(withClauseContext: RedshiftSqlParser.With_clauseContext): List<Ast_Cte> =
+    private fun parseWithClause(withClauseContext: RedshiftSqlParser.With_clauseContext): List<Ast_Cte> =
         withClauseContext.cte_list().common_table_expr().map { cteContext ->
             val cteName = cteContext.name().text
             val selectStatement = parseSelectStatement(cteContext.selectstmt())
             Ast_Cte(cteContext, cteName, selectStatement)
         }
 
-    fun parseSortClause(sortClauseContext: RedshiftSqlParser.Sort_clauseContext): Ast_SortClause {
+    private fun parseSortClause(sortClauseContext: RedshiftSqlParser.Sort_clauseContext): Ast_SortClause {
         val orders = sortClauseContext.sortby_list().sortby().map { sortByContext ->
             val expression = parseExpression(sortByContext.a_expr())
             val orderType = sortByContext.asc_desc_()?.let {
@@ -86,7 +86,7 @@ class AstParser {
         return Ast_SortClause(sortClauseContext, orders)
     }
 
-    fun parseSelectClause(selectClause: RedshiftSqlParser.Select_clauseContext): Ast_SelectClause {
+    private fun parseSelectClause(selectClause: RedshiftSqlParser.Select_clauseContext): Ast_SelectClause {
         /**
          * Parse the select clause, which can be a simple select or a combination of selects.
          * The combination can be UNION or EXCEPT.
@@ -112,7 +112,7 @@ class AstParser {
         return result
     }
 
-    fun parseSelectCombineOperator(selectCombOp: RedshiftSqlParser.Select_comb_opContext): Ast_SelectCombineOperator {
+    private fun parseSelectCombineOperator(selectCombOp: RedshiftSqlParser.Select_comb_opContext): Ast_SelectCombineOperator {
         val operatorType = when (selectCombOp.text) {
             "UNION" -> SelectCombineOperatorType.UNION
             "EXCEPT" -> SelectCombineOperatorType.EXCEPT
@@ -121,7 +121,7 @@ class AstParser {
         return Ast_SelectCombineOperator(selectCombOp, operatorType)
     }
 
-    fun parseSelectCombineOperatorModifier(
+    private fun parseSelectCombineOperatorModifier(
         all_or_distinct_Context: RedshiftSqlParser.All_or_distinctContext
     ): SelectCombineOperatorModifier {
         val modifierType = when (all_or_distinct_Context.text) {
@@ -132,7 +132,7 @@ class AstParser {
         return modifierType
     }
 
-    fun parseSimpleSelect(simpleSelectContext: RedshiftSqlParser.Simple_selectContext): Ast_SelectClause {
+    private fun parseSimpleSelect(simpleSelectContext: RedshiftSqlParser.Simple_selectContext): Ast_SelectClause {
         return when (simpleSelectContext) {
             is RedshiftSqlParser.StandardSimpleSelectContext -> parseStandardSelect(simpleSelectContext)
             is RedshiftSqlParser.ValuesSimpleSelectContext -> parseValuesSelect(simpleSelectContext)
@@ -140,7 +140,7 @@ class AstParser {
         }
     }
 
-    fun parseStandardSelect(selectContext: RedshiftSqlParser.StandardSimpleSelectContext): Ast_CoreSelectClause {
+    private fun parseStandardSelect(selectContext: RedshiftSqlParser.StandardSimpleSelectContext): Ast_CoreSelectClause {
         val isDistinct = selectContext.distinct_clause() != null
         val targets = selectContext.target_list()!!.target_el().map { targetElContext ->
             when (targetElContext) {
@@ -154,7 +154,7 @@ class AstParser {
         return Ast_CoreSelectClause(selectContext, isDistinct, targets, from, into)
     }
 
-    fun parseValuesSelect(valuesContext: RedshiftSqlParser.ValuesSimpleSelectContext): Ast_ValuesSelectClause {
+    private fun parseValuesSelect(valuesContext: RedshiftSqlParser.ValuesSimpleSelectContext): Ast_ValuesSelectClause {
         val valuesList = valuesContext.values_clause().expr_list().map { exprListContext ->
             exprListContext.a_expr().map { exprContext ->
                 parseExpression(exprContext)
@@ -163,15 +163,586 @@ class AstParser {
         return Ast_ValuesSelectClause(valuesContext, valuesList)
     }
 
-    fun parseTargetLabelContext(targetLabelcontext: RedshiftSqlParser.Target_labelContext): Ast_ColumnSelectTarget {
+    private fun parseTargetLabelContext(targetLabelcontext: RedshiftSqlParser.Target_labelContext): Ast_ColumnSelectTarget {
         val expression = parseExpression(targetLabelcontext.a_expr())
         val alias = targetLabelcontext.colLabel()?.text ?: targetLabelcontext.bareColLabel()?.text
         return Ast_ColumnSelectTarget(targetLabelcontext, expression, alias)
     }
 
-    fun parseExpression(exprContext: RedshiftSqlParser.A_exprContext): Ast_Expression {
-        // Implement parsing logic for expressions
-        return Ast_Expression(exprContext)
+    private fun parseExpression(exprContext: RedshiftSqlParser.A_exprContext): Ast_Expression {
+        val aExprLessLessContext: RedshiftSqlParser.A_expr_lesslessContext = exprContext.a_expr_qual().a_expr_lessless()
+        // TODO: what is the parent a_expr_qual context?
+        return parseLessLessExpression(aExprLessLessContext)
+    }
+
+    private fun parseLessLessExpression(
+        lessLessContext: RedshiftSqlParser.A_expr_lesslessContext
+    ): Ast_Expression {
+        val left = parseOrExpression(lessLessContext.a_expr_or())
+        return lessLessContext.a_expr_lessless_rest_()?.let {
+            var res = left
+            for (i in it.a_expr_or().indices) {
+                val right = parseOrExpression(it.a_expr_or(i)!!)
+                val operator = if (it.LESS_LESS(i) != null) BinaryOperator.BIT_SHIFT_LEFT else BinaryOperator.BIT_SHIFT_RIGHT
+                res = Ast_BinaryOperatorExpression(
+                    lessLessContext,
+                    res,
+                    right,
+                    operator
+                )
+            }
+            res
+
+        } ?: left
+
+    }
+
+    private fun parseOrExpression(orContext: RedshiftSqlParser.A_expr_orContext): Ast_Expression {
+        var res = parseAndExpression(orContext.a_expr_and(0)!!)
+        for (i in 1 until orContext.a_expr_and().size) {
+            val right = parseAndExpression(orContext.a_expr_and(i)!!)
+            res = Ast_BinaryOperatorExpression(
+                orContext,
+                res,
+                right,
+                BinaryOperator.OR
+            )
+        }
+        return res
+    }
+
+    private fun parseAndExpression(andContext: RedshiftSqlParser.A_expr_andContext): Ast_Expression {
+        var res = parseBetweenExpression(andContext.a_expr_between(0)!!)
+        for (i in 1 until andContext.a_expr_between().size) {
+            val right = parseBetweenExpression(andContext.a_expr_between(i)!!)
+            res = Ast_BinaryOperatorExpression(
+                andContext,
+                res,
+                right,
+                BinaryOperator.AND
+            )
+        }
+        return res
+    }
+
+    private fun parseBetweenExpression(betweenContext: RedshiftSqlParser.A_expr_betweenContext): Ast_Expression {
+        val target = parseInExpression(betweenContext.a_expr_in())
+        return betweenContext.a_expr_between_rest_()?.let { restContext ->
+            val lowerBound = parseInExpression(restContext.a_expr_in(0)!!)
+            val upperBound = parseInExpression(restContext.a_expr_in(1)!!)
+            val isNot = restContext.NOT() != null
+            val isSymmetric = restContext.SYMMETRIC() != null
+            Ast_BetweenExpression(
+                betweenContext,
+                target,
+                lowerBound,
+                upperBound,
+                isNot,
+                isSymmetric
+            )
+        } ?: target
+    }
+
+    private fun parseInExpression(inContext: RedshiftSqlParser.A_expr_inContext): Ast_Expression {
+        val target = parseUnaryNotExpression(inContext.a_expr_unary_not())
+        return if (inContext.IN_P() != null) {
+            val isNot = inContext.NOT() != null
+            val values = parseInSourceExpression(inContext.in_expr()!!)
+            Ast_InExpression(
+                inContext,
+                target,
+                values,
+                isNot
+            )
+        } else {
+            target
+        }
+    }
+
+    private fun parseInSourceExpression(inValuesContext: RedshiftSqlParser.In_exprContext) : Ast_InSource {
+        when (inValuesContext) {
+            is RedshiftSqlParser.In_expr_selectContext -> {
+                val selectStatement = parseSelectStatementWithParentheses(inValuesContext.select_with_parens())
+                return Ast_InSelectSource(inValuesContext, selectStatement)
+            }
+            is RedshiftSqlParser.In_expr_listContext -> {
+                val exprList = inValuesContext.expr_list().a_expr().map { exprContext ->
+                    parseExpression(exprContext)
+                }
+                return Ast_InValuesSource(inValuesContext, exprList)
+            }
+            else -> throw IllegalArgumentException("Unknown IN source type: ${inValuesContext.javaClass.simpleName}")
+        }
+    }
+
+    private fun parseUnaryNotExpression(unaryNotContext: RedshiftSqlParser.A_expr_unary_notContext): Ast_Expression {
+        val expression = parseIsNullExpression(unaryNotContext.a_expr_isnull())
+        if (unaryNotContext.NOT() != null) {
+            return Ast_UnaryOperatorExpression(
+                unaryNotContext,
+                expression,
+                UnaryOperator.NOT
+            )
+        }
+        return expression
+    }
+
+    private fun parseIsNullExpression(isNullContext: RedshiftSqlParser.A_expr_isnullContext): Ast_Expression {
+        val expression = parseIsNotExpression(isNullContext.a_expr_is_not())
+        val operator = if (isNullContext.ISNULL() != null) {
+            UnaryOperator.IS_NULL
+        } else if (isNullContext.NOTNULL() != null) {
+            UnaryOperator.IS_NOT_NULL
+        } else {
+            null
+        }
+        return operator?.let {
+            Ast_UnaryOperatorExpression(
+                isNullContext,
+                expression,
+                it
+            )
+        } ?: expression
+    }
+
+    private fun parseIsNotExpression(isNotContext: RedshiftSqlParser.A_expr_is_notContext): Ast_Expression {
+        val expression = parseCompareExpression(isNotContext.a_expr_compare())
+        if (isNotContext.IS() == null) {
+            return expression
+        }
+        val isNot = isNotContext.NOT() != null
+        return if (isNotContext.NULL_P() != null) {
+            if (isNot) {
+                Ast_UnaryOperatorExpression(
+                    isNotContext,
+                    expression,
+                    UnaryOperator.IS_NOT_NULL
+                )
+            } else {
+                Ast_UnaryOperatorExpression(
+                    isNotContext,
+                    expression,
+                    UnaryOperator.IS_NULL
+                )
+            }
+        } else if (isNotContext.TRUE_P() != null) {
+            if (isNot) {
+                Ast_UnaryOperatorExpression(
+                    isNotContext,
+                    expression,
+                    UnaryOperator.IS_FALSE
+                )
+            } else {
+                Ast_UnaryOperatorExpression(
+                    isNotContext,
+                    expression,
+                    UnaryOperator.IS_TRUE
+                )
+            }
+        } else if (isNotContext.UNKNOWN() != null) {
+            if (isNot) {
+                Ast_UnaryOperatorExpression(
+                    isNotContext,
+                    expression,
+                    UnaryOperator.IS_NOT_UNKNOWN
+                )
+            } else {
+                Ast_UnaryOperatorExpression(
+                    isNotContext,
+                    expression,
+                    UnaryOperator.IS_UNKNOWN
+                )
+            }
+        } else if (isNotContext.DISTINCT() != null) {
+            val right = parseExpression(isNotContext.a_expr()!!)
+            val operator = if (isNot) {
+                BinaryOperator.NOT_DISTINCT_FROM
+            } else {
+                BinaryOperator.DISTINCT_FROM
+            }
+            Ast_BinaryOperatorExpression(
+                isNotContext,
+                expression,
+                right,
+                operator
+            )
+        } else {
+            throw IllegalArgumentException("Unsupported IS (NOT)? expression: ${isNotContext.text}")
+        }
+    }
+
+    private fun parseCompareExpression(compareContext: RedshiftSqlParser.A_expr_compareContext): Ast_Expression {
+        val left = parseLikeExpression(compareContext.a_expr_like(0)!!)
+        if (compareContext.a_expr_like().size == 1) {
+            return left
+        }
+        val right = parseLikeExpression(compareContext.a_expr_like(1)!!)
+        val op = if (compareContext.EQUAL() != null) {
+            BinaryOperator.EQUALS
+        } else if (compareContext.NOT_EQUALS() != null) {
+            BinaryOperator.NOT_EQUALS
+        } else if (compareContext.GT() != null) {
+            BinaryOperator.GREATER_THAN
+        } else if (compareContext.LT() != null) {
+            BinaryOperator.LESS_THAN
+        } else if (compareContext.GREATER_EQUALS() != null) {
+            BinaryOperator.GREATER_THAN_OR_EQUAL
+        } else if (compareContext.LESS_EQUALS() != null) {
+            BinaryOperator.LESS_THAN_OR_EQUAL
+        } else {
+            throw IllegalArgumentException("Unknown comparison operator: ${compareContext.text}")
+        }
+        return Ast_BinaryOperatorExpression(
+            compareContext,
+            left,
+            right,
+            op
+        )
+    }
+
+    private fun parseLikeExpression(likeContext: RedshiftSqlParser.A_expr_likeContext): Ast_Expression {
+        val left = parseQualOpExpression(likeContext.a_expr_qual_op(0)!!)
+        if (likeContext.a_expr_qual_op().size == 1) {
+            return left
+        }
+        val right = parseQualOpExpression(likeContext.a_expr_qual_op(1)!!)
+        val isNot = likeContext.NOT() != null
+        val operator = if (likeContext.LIKE() != null) {
+            LikeOperatorType.LIKE
+        } else if (likeContext.ILIKE() != null) {
+            LikeOperatorType.ILIKE
+        } else if (likeContext.SIMILAR() != null) {
+            LikeOperatorType.SIMILAR_TO
+        } else {
+            throw IllegalArgumentException("Unknown LIKE operator: ${likeContext.text}")
+        }
+        val escape = likeContext.escape_()?.a_expr()?.let { parseExpression(it) }
+        return Ast_LikeExpression(
+            likeContext,
+            left,
+            right,
+            operator,
+            isNot,
+            escape
+        )
+    }
+
+    private fun parseQualOpExpression(qualOpContextext: RedshiftSqlParser.A_expr_qual_opContext): Ast_Expression {
+        val left = parseUnaryQualOpExpression(qualOpContextext.a_expr_unary_qualop(0)!!)
+        if (qualOpContextext.a_expr_unary_qualop().size != 1) {
+            throw UnsupportedOperationException("Multiple unary qualified operators are not supported yet: ${qualOpContextext.text}")
+        }
+        return left
+
+    }
+
+    private fun parseUnaryQualOpExpression(unaryQualOpContext: RedshiftSqlParser.A_expr_unary_qualopContext): Ast_Expression {
+        val left = parseAddExpression(unaryQualOpContext.a_expr_add())
+        if (unaryQualOpContext.qual_op() != null) {
+            throw UnsupportedOperationException("Qualified operators are not supported yet: ${unaryQualOpContext.text}")
+        }
+        return left
+    }
+
+    private fun parseAddExpression(addContext: RedshiftSqlParser.A_expr_addContext): Ast_Expression {
+        var res = parseMulExpression(addContext.a_expr_mul())
+        addContext.a_expr_add_rest_()?.let {
+            for (i in it.a_expr_mul().indices) {
+                val right = parseMulExpression(it.a_expr_mul(i)!!)
+                val operator = if (it.PLUS(i) != null) {
+                    BinaryOperator.ADD
+                } else if (it.MINUS(i) != null) {
+                    BinaryOperator.SUBTRACT
+                } else {
+                    throw IllegalArgumentException("Unknown add operator: ${it.text}")
+                }
+                res = Ast_BinaryOperatorExpression(
+                    addContext,
+                    res,
+                    right,
+                    operator
+                )
+            }
+        }
+        return res
+    }
+
+    fun parseMulExpression(mulContext: RedshiftSqlParser.A_expr_mulContext): Ast_Expression {
+        var res = parseCaretExpression(mulContext.a_expr_caret())
+        mulContext.a_expr_mul_rest_()?.let {
+            for (i in it.a_expr_caret().indices) {
+                val right = parseCaretExpression(it.a_expr_caret(i)!!)
+                val operator = if (it.STAR(i) != null) {
+                    BinaryOperator.MULTIPLY
+                } else if (it.SLASH(i) != null) {
+                    BinaryOperator.DIVIDE
+                } else if (it.PERCENT(i) != null) {
+                    BinaryOperator.MODULO
+                } else {
+                    throw IllegalArgumentException("Unknown multiplicative operator: ${it.text}")
+                }
+                res = Ast_BinaryOperatorExpression(
+                    mulContext,
+                    res,
+                    right,
+                    operator
+                )
+            }
+        }
+        return res
+    }
+
+    fun parseCaretExpression(caretContext: RedshiftSqlParser.A_expr_caretContext): Ast_Expression {
+        val left = parseUnarySignExpression(caretContext.a_expr_unary_sign(0)!!)
+        return if (caretContext.a_expr_unary_sign().size > 1) {
+            val right = parseUnarySignExpression(caretContext.a_expr_unary_sign(1)!!)
+            Ast_BinaryOperatorExpression(
+                caretContext,
+                left,
+                right,
+                BinaryOperator.CARET
+            )
+        } else {
+            left
+        }
+    }
+
+    private fun parseUnarySignExpression(unarySignContext: RedshiftSqlParser.A_expr_unary_signContext): Ast_Expression {
+        val expression = parseAtTimezoneExpression(unarySignContext.a_expr_at_time_zone())
+        val operator = if (unarySignContext.PLUS() != null) {
+            UnaryOperator.PLUS
+        } else if (unarySignContext.MINUS() != null) {
+            UnaryOperator.MINUS
+        } else {
+            null
+        }
+        return operator?.let {
+            Ast_UnaryOperatorExpression(
+                unarySignContext,
+                expression,
+                it
+            )
+        } ?: expression
+    }
+
+    private fun parseAtTimezoneExpression(atTimezoneContext: RedshiftSqlParser.A_expr_at_time_zoneContext): Ast_Expression {
+        val left = parseCollateExpression(atTimezoneContext.a_expr_collate())
+        atTimezoneContext.a_expr()?.let {
+            val right = parseExpression(it)
+            return Ast_BinaryOperatorExpression(
+                atTimezoneContext,
+                left,
+                right,
+                BinaryOperator.AT_TIME_ZONE
+            )
+        }
+        return left
+    }
+
+    private fun parseCollateExpression(collateContext: RedshiftSqlParser.A_expr_collateContext): Ast_Expression {
+        val expression = parseTypeCastExpression(collateContext.a_expr_typecast())
+        return collateContext.any_name()?.let {
+            val collationName = it.text
+            return Ast_CollateExpression(
+                collateContext,
+                expression,
+                collationName
+            )
+        } ?: expression
+    }
+
+    private fun parseTypeCastExpression(typeCastContext: RedshiftSqlParser.A_expr_typecastContext): Ast_Expression {
+        var res = parseCExpression(typeCastContext.c_expr())
+        typeCastContext.typename().forEach {
+            val typeName = it.text
+            res = Ast_CastExpression(
+                typeCastContext,
+                res,
+                typeName
+            )
+        }
+        return res
+    }
+
+    private fun parseCExpression(cContext: RedshiftSqlParser.C_exprContext): Ast_Expression {
+        return when (cContext) {
+            is RedshiftSqlParser.C_expr_existsContext -> parseExistsExpression(cContext)
+            is RedshiftSqlParser.C_expr_columnrefContext -> parseColumnRefExpression(cContext.columnref())
+            is RedshiftSqlParser.C_expr_constContext -> parseConstExpression(cContext.aexprconst())
+            is RedshiftSqlParser.C_expr_in_parensContext -> parseInParensExpression(cContext)
+            is RedshiftSqlParser.C_expr_caseContext -> parseCaseExpression(cContext.case_expr())
+            is RedshiftSqlParser.C_expr_funcContext -> parseFunctionExpression(cContext.func_expr())
+            is RedshiftSqlParser.C_expr_implicit_rowContext -> parseImplicitRowExpression(cContext)
+            else -> throw IllegalArgumentException("Unknown C expression type: ${cContext.javaClass.simpleName}")
+        }
+    }
+
+    private fun parseExistsExpression(existContext: RedshiftSqlParser.C_expr_existsContext): Ast_ExistsExpression {
+        val selectStatement = parseSelectStatementWithParentheses(existContext.select_with_parens())
+        return Ast_ExistsExpression(
+            existContext,
+            selectStatement
+        )
+    }
+
+    private fun parseColumnRefExpression(columnRefContext: RedshiftSqlParser.ColumnrefContext): Ast_ColumnReference {
+        val names: MutableList<String> = mutableListOf()
+        names.add(columnRefContext.colid().text)
+        columnRefContext.indirection()?.let {
+            it.indirection_el().forEach { indirection ->
+                if (indirection.OPEN_BRACKET() != null) {
+                    throw UnsupportedOperationException("Array indexing is not supported yet: ${indirection.text}")
+                } else if (indirection.DOT() != null) {
+                    val namePart = indirection.attr_name()?.text ?: indirection.STAR()?.let { "*" }
+                        ?: throw IllegalArgumentException("Unexpected column reference part: ${indirection.text}")
+                    names.add(namePart)
+                } else {
+                    throw IllegalArgumentException("Unexpected column reference part: ${indirection.text}")
+                }
+            }
+        }
+        return Ast_ColumnReference(
+            columnRefContext,
+            names
+        )
+    }
+
+    private fun parseConstExpression(constContext: RedshiftSqlParser.AexprconstContext): Ast_ConstantExpression {
+        // TODO: Implement parsing for different constant types
+        return Ast_ConstantExpression(
+            constContext,
+            constContext.text
+        )
+//        return if (constContext.iconst() != null) {
+//            parseIntegerConstant(constContext.iconst()!!)
+//        } else if (constContext.fconst() != null) {
+//            Ast_FloatConstant(
+//                constContext.fconst()!!,
+//                constContext.fconst()!!.text.toDouble()
+//            )
+//        } else if (constContext.sconst() != null) {
+//            Ast_StringConstant(
+//                constContext.sconst()!!,
+//                constContext.sconst()!!.text.trim('\'')
+//            )
+//        } else if (constContext.bconst() != null) {
+//            throw UnsupportedOperationException("Binary string constants are not supported yet: ${constContext.bconst()!!.text}")
+//        } else if (constContext.xconst() != null) {
+//            throw UnsupportedOperationException("Hexadecimal string constants are not supported yet: ${constContext.xconst()!!.text}")
+//        } else if (constContext.func_name() != null) {
+//            throw UnsupportedOperationException("Literal constructors are not supported yet: ${constContext.text}")
+//        } else {
+//            throw IllegalArgumentException("Unknown constant type: ${constContext.javaClass.simpleName}")
+//        }
+    }
+/*
+    private fun parseIntegerConstant(constContext: RedshiftSqlParser.IconstContext): Ast_IntegerConstant {
+        val value: Long = constContext.Integral()?.let {
+            it.text.toLong()
+        } ?: constContext.OctalIntegral()?.let {
+            it.text.substring(2).toLong(8) // Remove the leading '0o'
+        } ?: constContext.HexadecimalIntegral()?.let {
+            it.text.substring(2).toLong(16) // Remove the leading '0x'
+        } ?: constContext.BinaryIntegral()?.let {
+            it.text.substring(2).toLong(2) // Remove the leading '0b'
+        } ?: throw IllegalArgumentException("Unknown integer literal: ${constContext.text}")
+        return Ast_IntegerConstant(constContext, value)
+    }
+*/
+    private fun parseInParensExpression(inParensContext: RedshiftSqlParser.C_expr_in_parensContext): Ast_Expression {
+        val expressions = parseExpression(inParensContext.a_expr_in_parens!!)
+        // TODO: add support for indirection
+        return expressions
+    }
+
+    private fun parseCaseExpression(caseContext: RedshiftSqlParser.Case_exprContext): Ast_Expression {
+        val caseExpr = caseContext.case_arg()?.let { parseExpression(it.a_expr()) }
+        val whenClauses = caseContext.when_clause_list().when_clause().map { whenClauseContext ->
+            val condition = parseExpression(whenClauseContext.when_expr!!)
+            val result = parseExpression(whenClauseContext.then_expr!!)
+            Ast_WhenClause(whenClauseContext, condition, result)
+        }
+        val defaultExpr = caseContext.case_default()?.let { parseExpression(it.a_expr()) }
+        return Ast_CaseExpression(caseContext, caseExpr, whenClauses, defaultExpr)
+    }
+
+    private fun parseFunctionExpression(funcContext: RedshiftSqlParser.Func_exprContext): Ast_Expression {
+        funcContext.func_application()?.let { funcAppContext ->
+            val functionName = funcAppContext.func_name().text
+            val arguments = funcAppContext.func_arg_list()?.func_arg_expr()?.map { exprContext ->
+                if (exprContext.param_name() != null) {
+                    throw UnsupportedOperationException("Named parameters are not supported yet: ${exprContext.text}")
+                }
+                parseExpression(exprContext.a_expr())
+            } ?: emptyList()
+            val isDistinct = funcAppContext.DISTINCT() != null
+            val isAll = funcAppContext.ALL() != null
+            val isStar = funcAppContext.STAR() != null
+            if (funcAppContext.VARIADIC() != null) {
+                throw UnsupportedOperationException("Variadic functions are not supported yet: ${funcAppContext.text}")
+            }
+            val sort = funcAppContext.sort_clause()?.let { parseSortClause(it) }
+            val withinGroup = funcContext.within_group_clause()?.let { parseSortClause(it.sort_clause()) }
+            val filter = funcContext.filter_clause()?.let { parseExpression(it.a_expr()) }
+            val over = funcContext.over_clause()?.let { parseOverClause(it) }
+            return Ast_FunctionCallExpression(
+                funcContext,
+                functionName,
+                arguments,
+                isAll,
+                isDistinct,
+                isStar,
+                sort,
+                withinGroup,
+                filter,
+                over
+            )
+        }
+        funcContext.func_expr_common_subexpr()?.let {
+            val subExpressions: MutableList<Ast_Expression> = mutableListOf()
+            it.a_expr().forEach { exprContext ->
+                subExpressions.add(parseExpression(exprContext))
+            }
+            it.expr_list()?.let { exprListContext ->
+                exprListContext.a_expr().forEach { exprContext ->
+                    subExpressions.add(parseExpression(exprContext))
+                }
+            }
+            return Ast_CommonFunctionCallExpression(
+                funcContext,
+                it.text,
+                subExpressions
+            )
+        }
+        throw IllegalArgumentException("Unknown function expression type: ${funcContext.text}")
+    }
+
+    private fun parseOverClause(overContext: RedshiftSqlParser.Over_clauseContext): Ast_OverClause {
+        overContext.colid()?.let {
+            val windowName = it.text
+            return Ast_OverWindowName(overContext, windowName)
+        }
+        val windowSpecContext = overContext.window_specification()!!
+        val windowName = windowSpecContext.existing_window_name_()?.text
+        val partitionBy: List<Ast_Expression>? = windowSpecContext.partition_clause_()?.expr_list()?.a_expr()?.map { exprContext ->
+            parseExpression(exprContext)
+        }
+        val orderBy: Ast_SortClause? = windowSpecContext.sort_clause()?.let { parseSortClause(it) }
+        val frameClause: Ast_FrameClause? = windowSpecContext.frame_clause_()?.let { frameContext ->
+            Ast_FrameClause(frameContext, frameContext.text)
+        }
+        return Ast_OverWindowSpecification(
+            overContext,
+            windowName,
+            partitionBy,
+            orderBy,
+            frameClause
+        )
+    }
+
+    private fun parseImplicitRowExpression(implicitRowContext: RedshiftSqlParser.C_expr_implicit_rowContext): Ast_Expression {
+        // TODO
+        throw UnsupportedOperationException("Implicit row expressions are not supported yet: ${implicitRowContext.text}")
     }
 
     fun parseFromClause(fromContext: RedshiftSqlParser.From_clauseContext): Ast_From {
@@ -201,7 +772,7 @@ class AstParser {
             )
         }
         tableRefContext.select_with_parens()?.let {
-            val selectStatement = parseSelectStatemantWithParantheses(it)
+            val selectStatement = parseSelectStatementWithParentheses(it)
             return Ast_SimpleFromSubQuery(
                 tableRefContext,
                 selectStatement,

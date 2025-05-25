@@ -384,7 +384,11 @@ a_expr_qual
 /*18*/
 
 a_expr_lessless
-    : a_expr_or ((LESS_LESS | GREATER_GREATER) a_expr_or)*
+    : a_expr_or a_expr_lessless_rest_?
+    ;
+
+a_expr_lessless_rest_
+    : ( (LESS_LESS | GREATER_GREATER) a_expr_or )+
     ;
 
 /*17*/
@@ -402,7 +406,11 @@ a_expr_and
 /*21*/
 
 a_expr_between
-    : a_expr_in (NOT? BETWEEN SYMMETRIC? a_expr_in AND a_expr_in)?
+    : a_expr_in a_expr_between_rest_?
+    ;
+
+a_expr_between_rest_
+    : NOT? BETWEEN SYMMETRIC? a_expr_in AND a_expr_in
     ;
 
 /*20*/
@@ -474,13 +482,21 @@ a_expr_unary_qualop
 /* 7*/
 
 a_expr_add
-    : a_expr_mul ((MINUS | PLUS) a_expr_mul)*
+    : a_expr_mul a_expr_add_rest_?
+    ;
+
+a_expr_add_rest_
+    : ( (MINUS | PLUS) a_expr_mul )+
     ;
 
 /* 6*/
 
 a_expr_mul
-    : a_expr_caret ((STAR | SLASH | PERCENT) a_expr_caret)*
+    : a_expr_caret a_expr_mul_rest_?
+    ;
+
+a_expr_mul_rest_
+    : ( (STAR | SLASH | PERCENT) a_expr_caret )+
     ;
 
 /* 5*/
@@ -520,14 +536,14 @@ c_expr
 //    | PARAM opt_indirection                                            # c_expr_expr
 //    | GROUPING OPEN_PAREN expr_list CLOSE_PAREN                        # c_expr_expr
 //    | /*22*/ UNIQUE select_with_parens                                 # c_expr_expr
-    | columnref                                                        # c_expr_expr
-    | aexprconst                                                       # c_expr_expr
-    | OPEN_PAREN a_expr_in_parens = a_expr CLOSE_PAREN opt_indirection # c_expr_expr
+    | columnref                                                        # c_expr_columnref
+    | aexprconst                                                       # c_expr_const
+    | OPEN_PAREN a_expr_in_parens = a_expr CLOSE_PAREN opt_indirection # c_expr_in_parens
     | case_expr                                                        # c_expr_case
-    | func_expr                                                        # c_expr_expr
+    | func_expr                                                        # c_expr_func
 //    | select_with_parens indirection?                                  # c_expr_expr
 //    | explicit_row                                                     # c_expr_expr
-    | implicit_row                                                     # c_expr_expr
+    | implicit_row                                                     # c_expr_implicit_row
 //    | row OVERLAPS row /* 14*/                                         # c_expr_expr
 //    | DEFAULT                                                          # c_expr_expr
     ;
@@ -593,7 +609,7 @@ when_clause_list
     ;
 
 when_clause
-    : WHEN a_expr THEN a_expr
+    : WHEN when_expr = a_expr THEN then_expr = a_expr
     ;
 
 case_default

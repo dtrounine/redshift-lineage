@@ -197,6 +197,207 @@ data class Ast_OptTempTableName(
 
 open class Ast_Expression(override val context: ParserRuleContext) : Ast_Node(context)
 
+enum class BinaryOperator {
+    ADD,
+    SUBTRACT,
+    MULTIPLY,
+    DIVIDE,
+    MODULO,
+    AND,
+    OR,
+    EQUALS,
+    NOT_EQUALS,
+    LESS_THAN,
+    LESS_THAN_OR_EQUAL,
+    GREATER_THAN,
+    GREATER_THAN_OR_EQUAL,
+    BIT_SHIFT_LEFT,
+    BIT_SHIFT_RIGHT,
+    DISTINCT_FROM,
+    NOT_DISTINCT_FROM,
+    CARET,
+    AT_TIME_ZONE,
+}
+
+class Ast_BinaryOperatorExpression(
+    override val context: ParserRuleContext,
+    val left: Ast_Expression,
+    val right: Ast_Expression,
+    val operator: BinaryOperator
+): Ast_Expression(context)
+
+class Ast_BetweenExpression(
+    override val context: ParserRuleContext,
+    val target: Ast_Expression,
+    val lowerBound: Ast_Expression,
+    val upperBound: Ast_Expression,
+    val isNot: Boolean,
+    val isSymmetric: Boolean
+): Ast_Expression(context)
+
+class Ast_InExpression(
+    override val context: ParserRuleContext,
+    val target: Ast_Expression,
+    val values: Ast_Expression,
+    val isNot: Boolean
+): Ast_Expression(context)
+
+sealed class Ast_InSource(
+    override val context: ParserRuleContext,
+): Ast_Expression(context)
+
+class Ast_InValuesSource(
+    override val context: ParserRuleContext,
+    val values: List<Ast_Expression>
+): Ast_InSource(context)
+
+class Ast_InSelectSource(
+    override val context: ParserRuleContext,
+    val selectStatement: Ast_SelectStatement
+): Ast_InSource(context)
+
+enum class UnaryOperator {
+    NOT,
+    IS_NULL,
+    IS_NOT_NULL,
+    IS_TRUE,
+    IS_FALSE,
+    IS_UNKNOWN,
+    IS_NOT_UNKNOWN,
+    MINUS,
+    PLUS,
+}
+
+class Ast_UnaryOperatorExpression(
+    override val context: ParserRuleContext,
+    val expression: Ast_Expression,
+    val operator: UnaryOperator
+): Ast_Expression(context)
+
+enum class LikeOperatorType {
+    LIKE,
+    ILIKE,
+    SIMILAR_TO
+}
+
+class Ast_LikeExpression(
+    override val context: ParserRuleContext,
+    val target: Ast_Expression,
+    val pattern: Ast_Expression,
+    val operator: LikeOperatorType,
+    val isNot: Boolean,
+    val escape: Ast_Expression?
+): Ast_Expression(context)
+
+class Ast_CollateExpression(
+    override val context: ParserRuleContext,
+    val expression: Ast_Expression,
+    val collation: String
+): Ast_Expression(context)
+
+class Ast_CastExpression(
+    override val context: ParserRuleContext,
+    val expression: Ast_Expression,
+    val targetType: String
+): Ast_Expression(context)
+
+class Ast_ExistsExpression(
+    override val context: ParserRuleContext,
+    val selectStatement: Ast_SelectStatement
+): Ast_Expression(context)
+
+class Ast_ColumnReference(
+    override val context: ParserRuleContext,
+    val name: List<String>
+): Ast_Expression(context)
+
+class Ast_ConstantExpression(
+    override val context: ParserRuleContext,
+    val text: String
+): Ast_Expression(context)
+
+/*
+class Ast_IntegerConstant(
+    override val context: ParserRuleContext,
+    val value: Long
+): Ast_ConstantExpression(context)
+
+class Ast_FloatConstant(
+    override val context: ParserRuleContext,
+    val value: Double
+): Ast_ConstantExpression(context)
+
+class Ast_StringConstant(
+    override val context: ParserRuleContext,
+    val value: String
+): Ast_ConstantExpression(context)
+
+class Ast_BooleanConstant(
+    override val context: ParserRuleContext,
+    val value: Boolean
+): Ast_ConstantExpression(context)
+
+class Ast_TypenameConstant(
+    override val context: ParserRuleContext,
+    val typename: String,
+    val value: String
+): Ast_ConstantExpression(context)
+*/
+
+data class Ast_CaseExpression(
+    override val context: ParserRuleContext,
+    val case: Ast_Expression?,
+    val whenClauses: List<Ast_WhenClause>,
+    val elseClause: Ast_Expression?
+): Ast_Expression(context)
+
+data class Ast_WhenClause(
+    override val context: ParserRuleContext,
+    val condition: Ast_Expression,
+    val result: Ast_Expression
+): Ast_Node(context)
+
+data class Ast_FunctionCallExpression(
+    override val context: ParserRuleContext,
+    val functionName: String,
+    val arguments: List<Ast_Expression>,
+    val isAll: Boolean,
+    val isDistinct: Boolean,
+    val isStar: Boolean,
+    val sort: Ast_SortClause?,
+    val withinGroup: Ast_SortClause?,
+    val filter: Ast_Expression?,
+    val over: Ast_OverClause?
+): Ast_Expression(context)
+
+data class Ast_CommonFunctionCallExpression(
+    override val context: ParserRuleContext,
+    val text: String,
+    val subExpressions: List<Ast_Expression>
+): Ast_Expression(context)
+
+sealed class Ast_OverClause(
+    override val context: ParserRuleContext
+): Ast_Node(context)
+
+data class Ast_OverWindowName(
+    override val context: ParserRuleContext,
+    val windowName: String
+): Ast_OverClause(context)
+
+data class Ast_OverWindowSpecification(
+    override val context: ParserRuleContext,
+    val windowName: String?,
+    val partitionBy: List<Ast_Expression>?,
+    val orderBy: Ast_SortClause?,
+    val frame: Ast_FrameClause?
+) : Ast_OverClause(context)
+
+data class Ast_FrameClause(
+    override val context: ParserRuleContext,
+    val text: String
+): Ast_Node(context)
+
 enum class DropBehavior {
     RESTRICT,
     CASCADE

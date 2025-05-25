@@ -12,6 +12,9 @@ import io.github.dtrounine.lineage.util.mergeOnlyLineage
 class TableLineageExtractor {
 
     fun getLineage(statements: List<Ast_Statement>): LineageData {
+        if (statements.isEmpty()) {
+            return LineageData.newEmpty()
+        }
         return statements.map { getLineage(it) }
             .reduce { acc, lineageInfo -> acc.mergeAll(lineageInfo) }
     }
@@ -20,6 +23,7 @@ class TableLineageExtractor {
         return when (statement) {
             is Ast_SelectStatement -> getSelectLineage(statement)
             is Ast_InsertStatement -> getInsertLineage(statement)
+            is Ast_DeleteStatement -> getDeleteLineage(statement)
             else -> LineageData.newEmpty()
         }
     }
@@ -124,6 +128,17 @@ class TableLineageExtractor {
             resolvedLineage = resolvedLineage.mergeAll(cteLineage).mergeAll(subLineage)
         }
         return resolvedLineage
+    }
+
+    private fun getDeleteLineage(delete: Ast_DeleteStatement): LineageData {
+        val targetTable = delete.from.tableFqn
+        val deleteLineage = LineageData(
+            lineage = mapOf(targetTable to emptySet()),
+            sources = emptySet()
+        )
+        val cteLineage = getCteLineage(delete.with)
+        val deletedLineage = resolvedTransitiveLineage(deleteLineage, cteLineage.lineage)
+        return deletedLineage
     }
 
     private fun resolvedTransitiveSources(

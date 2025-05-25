@@ -21,6 +21,7 @@ class AstParser {
             is RedshiftSqlParser.SelectStatementContext -> return parseSelectStatement(stmtContext.selectstmt())
             is RedshiftSqlParser.DropStatementContext -> return parseDropStatement(stmtContext.dropstmt())
             is RedshiftSqlParser.InsertStatementContext -> return parseInsertStatement(stmtContext.insertstmt())
+            is RedshiftSqlParser.DeleteStatementContext -> return parseDeleteStatement(stmtContext.deletestmt())
             // Add other statement types here
             else -> {
                 println("Unsupported statement type: ${stmtContext.javaClass.simpleName}")
@@ -299,5 +300,21 @@ class AstParser {
         val alias = insertTargetContext.colid()?.text
         val columns = insertTargetContext.target_columns()?.colid()?.map { it.text }
         return Ast_InsertTarget(insertTargetContext, tableFqn, alias, columns)
+    }
+
+    fun parseDeleteStatement(deleteStatementContext: RedshiftSqlParser.DeletestmtContext): Ast_DeleteStatement {
+        val with: List<Ast_Cte> = deleteStatementContext.with_clause()?.let { parseWithClause(it) } ?: emptyList()
+        val from: Ast_SimpleFromTableRef = deleteStatementContext.relation_expr_opt_alias().let {
+            val tableFqn = it.relation_expr().qualified_name().text
+            val alias = it.colid()?.text
+            Ast_SimpleFromTableRef(deleteStatementContext.relation_expr_opt_alias(), tableFqn, alias)
+        }
+        val where: Ast_Expression? = deleteStatementContext.where_clause()?.let { parseExpression(it.a_expr()) }
+        return Ast_DeleteStatement(
+            deleteStatementContext,
+            with,
+            from,
+            where
+        )
     }
 }

@@ -222,3 +222,10 @@ data class Ast_InsertTarget(
     val alias: String?,
     val columns: List<String>?
 ): Ast_Node(context)
+
+data class Ast_DeleteStatement(
+    override val context: ParserRuleContext,
+    val with: List<Ast_Cte>,
+    val from: Ast_SimpleFromTableRef,
+    val where: Ast_Expression?
+): Ast_Statement(context)

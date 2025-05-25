@@ -6,6 +6,9 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
 import io.github.dtrounine.lineage.output.LineageOutputWriter
+import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_JSON
+import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_OPENLINEAGE
+import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_YAML
 import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlLexer
 import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlParser
 import io.github.dtrounine.lineage.sql.ast.AstParser
@@ -44,7 +47,7 @@ class RedLinCli: CliktCommand(
             names = arrayOf("--out-format"),
             help = "Output format. Default is json."
         ).choice(
-            "json", "openlineage"
+            OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_OPENLINEAGE, OUTPUT_FORMAT_YAML
         ).default("json")
 
     override fun run() {

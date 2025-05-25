@@ -1,9 +1,12 @@
 package io.github.dtrounine.lineage.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * Data class representing the lineage of data sources and sinks
  * discovered during the analysis.
  */
+@Serializable
 data class LineageData(
     /**
      * Map of sinks to their sources (sources may be empty).

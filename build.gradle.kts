@@ -29,6 +29,7 @@ dependencies {
     implementation("io.openlineage:openlineage-java:1.33.0")
     implementation("org.slf4j:slf4j-simple:1.6.2")
     implementation("com.github.ajalt.clikt:clikt:4.4.0")
+    implementation("com.charleskorn.kaml:kaml:0.59.0")
 }
 
 sourceSets {

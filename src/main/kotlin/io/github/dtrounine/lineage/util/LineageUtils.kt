@@ -16,9 +16,21 @@ fun mergeLineage(left: Map<String, Set<String>>, right: Map<String, Set<String>>
     return merged
 }
 
-fun LineageData.merge(other: LineageData): LineageData = LineageData(
+/**
+ * Merges two [LineageData] instances by combining their lineage maps and their lists of sources.
+ */
+fun LineageData.mergeAll(other: LineageData): LineageData = LineageData(
     lineage = mergeLineage(this.lineage, other.lineage),
     sources = this.sources union other.sources
+)
+
+/**
+ * Merges two [LineageData] instances by combining their lineage maps,
+ * but does not merge the sources.
+ */
+fun LineageData.mergeOnlyLineage(other: LineageData): LineageData = LineageData(
+    lineage = mergeLineage(this.lineage, other.lineage),
+    sources = this.sources // Sources are not merged
 )
 
 fun LineageData.println() {

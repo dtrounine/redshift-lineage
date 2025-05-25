@@ -2,7 +2,8 @@ package io.github.dtrounine.lineage
 
 import io.github.dtrounine.lineage.model.LineageData
 import io.github.dtrounine.lineage.sql.ast.*
-import io.github.dtrounine.lineage.util.merge
+import io.github.dtrounine.lineage.util.mergeAll
+import io.github.dtrounine.lineage.util.mergeOnlyLineage
 
 /**
  * Extracts lineage information from parsed SQL statements,
@@ -12,7 +13,7 @@ class TableLineageExtractor {
 
     fun getLineage(statements: List<Ast_Statement>): LineageData {
         return statements.map { getLineage(it) }
-            .reduce { acc, lineageInfo -> acc.merge(lineageInfo) }
+            .reduce { acc, lineageInfo -> acc.mergeAll(lineageInfo) }
     }
 
     fun getLineage(statement: Ast_Statement): LineageData {
@@ -24,8 +25,13 @@ class TableLineageExtractor {
     }
 
     private fun getSelectLineage(select: Ast_SelectStatement): LineageData {
-        // TODO: process CTEs
-        return getSelectLineage(select.selectClause)
+        val cteLineage = getCteLineage(select.with)
+        val selectLineage = getSelectLineage(select.selectClause)
+        val resolvedSelectLineage = resolvedTransitiveLineage(
+            selectLineage,
+            cteLineage.lineage
+        )
+        return resolvedSelectLineage
     }
 
     private fun getSelectLineage(select: Ast_SelectClause): LineageData {
@@ -34,7 +40,7 @@ class TableLineageExtractor {
                 val left = getSelectLineage(select.left)
                 val right = getSelectLineage(select.right)
                 // TODO: verify schema compatibility for duplicate keys
-                left.merge(right)
+                left.mergeAll(right)
             }
             is Ast_CoreSelectClause ->  getSimpleSelectLineage(select)
             is Ast_ValuesSelectClause -> LineageData.newEmpty() // Values clause does not have lineage
@@ -50,7 +56,7 @@ class TableLineageExtractor {
                 lineage = mapOf(targetTable to fromLineage.sources),
                 sources = emptySet()
             )
-            fromLineage.merge(intoLineage)
+            fromLineage.mergeAll(intoLineage)
         } ?: fromLineage
 
     }
@@ -59,7 +65,7 @@ class TableLineageExtractor {
         var out = LineageData.newEmpty()
         for (fromElement in from.elements) {
             val lineage = getLineage(fromElement)
-            out = out.merge(lineage)
+            out = out.mergeAll(lineage)
         }
         return out
     }
@@ -68,7 +74,7 @@ class TableLineageExtractor {
         var lineage = getLineage(fromElement.src)
         fromElement.joins.forEach { join ->
             val joinLineage = getLineage(join)
-            lineage = lineage.merge(joinLineage)
+            lineage = lineage.mergeAll(joinLineage)
         }
         return lineage
     }
@@ -97,9 +103,49 @@ class TableLineageExtractor {
         val sourcesLineage = getSelectLineage(insert.selectStatement)
         val rawInsertLineage = LineageData(
             lineage = mapOf(targetTable to sourcesLineage.sources),
-            sources = emptySet()
+            sources = sourcesLineage.sources
         )
-        return rawInsertLineage.merge(sourcesLineage)
+        val cteLineage = getCteLineage(insert.with)
+        val resolvedInsertLineage = resolvedTransitiveLineage(
+            rawInsertLineage,
+            cteLineage.lineage
+        )
+        return resolvedInsertLineage.mergeOnlyLineage(sourcesLineage)
     }
 
+    private fun getCteLineage(cteList: List<Ast_Cte>): LineageData {
+        var resolvedLineage = LineageData.newEmpty()
+        cteList.forEach {
+            val subLineage = resolvedTransitiveLineage(getLineage(it.selectStatement), resolvedLineage.lineage)
+            val cteLineage = LineageData(
+                lineage = mapOf(it.name to subLineage.sources),
+                sources = subLineage.sources
+            )
+            resolvedLineage = resolvedLineage.mergeAll(cteLineage).mergeAll(subLineage)
+        }
+        return resolvedLineage
+    }
+
+    private fun resolvedTransitiveSources(
+        sources: Set<String>,
+        lineage: Map<String, Set<String>>
+    ): Set<String> {
+        return sources.flatMap { source ->
+            lineage[source] ?: setOf(source)
+        }.toSet()
+    }
+
+    private fun resolvedTransitiveLineage(
+        srcLineage: LineageData,
+        previouslyResolvedLineage: Map<String, Set<String>>
+    ): LineageData {
+        val resolvedLineage = srcLineage.lineage.mapValues { (sink, sources) ->
+            resolvedTransitiveSources(sources, previouslyResolvedLineage)
+        }
+        val resolvedSources = resolvedTransitiveSources(srcLineage.sources, previouslyResolvedLineage)
+        return LineageData(
+            lineage = resolvedLineage,
+            sources = resolvedSources
+        )
+    }
 }

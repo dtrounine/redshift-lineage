@@ -14,14 +14,15 @@ parent_dir=$(dirname $install_dir)
   mkdir -p $parent_dir
 }
 
-# array declaration
-declare -A props
 file="$script_dir/../gradle.properties"
 while IFS='=' read -r key value; do
-   props["$key"]="$value"
-done < "$file"
+  # sanitize the key if necessary, e.g. replace dots with underscores:
+  varname="${key//./_}"
+  # export or just assign:
+  echo "Setting property: $varname = $value"
+  eval "${varname}=\"\$value\""
+done < <(grep -v -e '^\s*#' -e '^\s*$' "$file")
 
-version=${props["version"]}
 echo "Installing Redshift Lineage version $version"
 
 (

@@ -22,9 +22,10 @@ class AstParser {
             is RedshiftSqlParser.DropStatementContext -> return parseDropStatement(stmtContext.dropstmt())
             is RedshiftSqlParser.InsertStatementContext -> return parseInsertStatement(stmtContext.insertstmt())
             is RedshiftSqlParser.DeleteStatementContext -> return parseDeleteStatement(stmtContext.deletestmt())
+            is RedshiftSqlParser.CreateStatementContext -> return parseCreateStatement(stmtContext.createstmt())
             // Add other statement types here
             else -> {
-                println("Unsupported statement type: ${stmtContext.javaClass.simpleName}")
+//                println("Unsupported statement type: ${stmtContext.javaClass.simpleName}")
                 return null
             }
         }
@@ -887,5 +888,35 @@ class AstParser {
             from,
             where
         )
+    }
+
+    private fun parseCreateStatement(createTableContext: RedshiftSqlParser.CreatestmtContext): Ast_CreateTableStatement {
+        val ifNotExists = createTableContext.EXISTS() != null
+        val isTemporary = createTableContext.opttemp() != null
+        val tableFqn = createTableContext.qualified_name().text
+        val rest = createTableContext.createstmt_rest_()
+        return when (rest) {
+            is RedshiftSqlParser.CreateStmtColumnsContext -> {
+                val colDefs = rest.opttableelementlist()?.tableelementlist()?.tableelement()?.map { Ast_ColumnDefinition(it, it.text) } ?: emptyList()
+                Ast_CreateTableWithColumnDefinitions(
+                    createTableContext,
+                    tableFqn,
+                    ifNotExists,
+                    isTemporary,
+                    colDefs
+                )
+            }
+            is RedshiftSqlParser.CreateStmtAsSelectContext -> {
+                val select = parseSelectStatement(rest.selectstmt())
+                Ast_CreateTableAsSelect(
+                    createTableContext,
+                    tableFqn,
+                    ifNotExists,
+                    isTemporary,
+                    select
+                )
+            }
+            else -> throw IllegalArgumentException("Unknown create table statement type: ${rest.javaClass.simpleName}")
+        }
     }
 }

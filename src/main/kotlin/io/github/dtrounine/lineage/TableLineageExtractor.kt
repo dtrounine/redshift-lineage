@@ -24,6 +24,7 @@ class TableLineageExtractor {
             is Ast_SelectStatement -> getSelectLineage(statement)
             is Ast_InsertStatement -> getInsertLineage(statement)
             is Ast_DeleteStatement -> getDeleteLineage(statement)
+            is Ast_CreateTableAsSelect -> getCreateAsSelectLineage(statement)
             else -> LineageData.newEmpty()
         }
     }
@@ -139,6 +140,16 @@ class TableLineageExtractor {
         val cteLineage = getCteLineage(delete.with)
         val deletedLineage = resolvedTransitiveLineage(deleteLineage, cteLineage.lineage)
         return deletedLineage
+    }
+
+    private fun getCreateAsSelectLineage(create: Ast_CreateTableAsSelect): LineageData {
+        val targetTable = create.tableName
+        val sourcesLineage = getSelectLineage(create.selectStatement)
+        val createLineage = LineageData(
+            lineage = mapOf(targetTable to sourcesLineage.sources),
+            sources = sourcesLineage.sources
+        )
+        return createLineage.mergeOnlyLineage(sourcesLineage)
     }
 
     private fun resolvedTransitiveSources(

@@ -430,3 +430,32 @@ data class Ast_DeleteStatement(
     val from: Ast_SimpleFromTableRef,
     val where: Ast_Expression?
 ): Ast_Statement(context)
+
+sealed class Ast_CreateTableStatement(
+    override val context: ParserRuleContext,
+    open val tableName: String,
+    open val ifNotExists: Boolean,
+    open val isTemporary: Boolean
+): Ast_Statement(context)
+
+data class Ast_CreateTableWithColumnDefinitions(
+    override val context: ParserRuleContext,
+    override val tableName: String,
+    override val ifNotExists: Boolean,
+    override val isTemporary: Boolean,
+    val columns: List<Ast_ColumnDefinition>
+): Ast_CreateTableStatement(context, tableName, ifNotExists, isTemporary)
+
+data class Ast_CreateTableAsSelect(
+    override val context: ParserRuleContext,
+    override val tableName: String,
+    override val ifNotExists: Boolean,
+    override val isTemporary: Boolean,
+    val selectStatement: Ast_SelectStatement
+): Ast_CreateTableStatement(context, tableName, ifNotExists, isTemporary)
+
+data class Ast_ColumnDefinition(
+    override val context: ParserRuleContext,
+    // TODO: implement parsing column definition
+    val text: String
+): Ast_Node(context)

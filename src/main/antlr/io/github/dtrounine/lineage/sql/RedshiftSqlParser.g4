@@ -200,22 +200,12 @@ insert_rest
 
 
 createstmt
-    : CREATE opttemp? TABLE (IF_P NOT EXISTS)? qualified_name (
-        OPEN_PAREN opttableelementlist? CLOSE_PAREN
-//            optinherit?
-//            optpartitionspec?
-//            table_access_method_clause?
-//            optwith?
-//            oncommitoption?
-//            opttablespace?
-            table_attributes?
+    : CREATE opttemp? TABLE (IF_P NOT EXISTS)? qualified_name createstmt_rest_
+    ;
 
-//        | (OPEN_PAREN opttableelementlist? CLOSE_PAREN)? optinherit? optpartitionspec? table_access_method_clause? optwith?
-//        | OF any_name opttypedtableelementlist? optpartitionspec? table_access_method_clause? optwith? oncommitoption? opttablespace?
-//        | PARTITION OF qualified_name opttypedtableelem
-//        entlist? partitionboundspec optpartitionspec? table_access_method_clause? optwith? oncommitoption?
-//            opttablespace?
-    )
+createstmt_rest_
+    : OPEN_PAREN opttableelementlist? CLOSE_PAREN table_attributes?  # CreateStmtColumns
+    | AS OPEN_PAREN selectstmt CLOSE_PAREN                           # CreateStmtAsSelect
     ;
 
 opttemp

@@ -531,7 +531,7 @@ c_expr
     | OPEN_PAREN a_expr_in_parens = a_expr CLOSE_PAREN opt_indirection # c_expr_in_parens
     | case_expr                                                        # c_expr_case
     | func_expr                                                        # c_expr_func
-//    | select_with_parens indirection?                                  # c_expr_expr
+    | select_with_parens indirection?                                  # c_expr_select
 //    | explicit_row                                                     # c_expr_expr
     | implicit_row                                                     # c_expr_implicit_row
 //    | row OVERLAPS row /* 14*/                                         # c_expr_expr

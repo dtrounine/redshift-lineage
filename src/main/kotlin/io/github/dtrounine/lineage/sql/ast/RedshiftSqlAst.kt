@@ -86,8 +86,9 @@ data class Ast_CoreSelectClause(
     val isDistinct: Boolean,
     val targets: List<Ast_SelectTarget>,
     val from: Ast_From?,
-    val into: Ast_OptTempTableName?
-    // TODO: add WHERE clause, GROUP BY, HAVING, WINDOW etc.
+    val into: Ast_OptTempTableName?,
+    val where: Ast_Expression?
+    // TODO: add GROUP BY, HAVING, WINDOW etc.
 ): Ast_SelectClause(context) {
     override fun accept(visitor: AstVisitor) {
         visitor.visitAst_CoreSelectClause(this)
@@ -314,7 +315,7 @@ data class Ast_OptTempTableName(
 }
 
 open class Ast_Expression(override val context: ParserRuleContext) : Ast_Node(context) {
-    override open fun accept(visitor: AstVisitor) {
+    override fun accept(visitor: AstVisitor) {
         visitor.visitAst_Expression(this)
     }
 }
@@ -481,6 +482,29 @@ class Ast_ExistsExpression(
     override fun accept(visitor: AstVisitor) {
         visitor.visitAst_ExistsExpression(this)
         selectStatement.accept(visitor)
+    }
+}
+
+class Ast_SelectExpression(
+    override val context: ParserRuleContext,
+    val selectStatement: Ast_SelectStatement,
+    val indirections: List<Ast_Indirection>?
+): Ast_Expression(context) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_SelectExpression(this)
+        selectStatement.accept(visitor)
+        indirections?.forEach {
+            it.accept(visitor)
+        }
+    }
+}
+
+class Ast_Indirection(
+    override val context: ParserRuleContext,
+    val attrName: String
+): Ast_Node(context) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_Indirection(this)
     }
 }
 

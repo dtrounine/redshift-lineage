@@ -152,7 +152,10 @@ class AstParser {
         }
         val from: Ast_From? = selectContext.from_clause()?.let { parseFromClause(it) }
         val into: Ast_OptTempTableName? = selectContext.into_clause()?.let { parseIntoClause(it) }
-        return Ast_CoreSelectClause(selectContext, isDistinct, targets, from, into)
+        val where: Ast_Expression? = selectContext.where_clause()?.let { whereContext ->
+            parseExpression(whereContext.a_expr())
+        }
+        return Ast_CoreSelectClause(selectContext, isDistinct, targets, from, into, where)
     }
 
     private fun parseValuesSelect(valuesContext: RedshiftSqlParser.ValuesSimpleSelectContext): Ast_ValuesSelectClause {
@@ -574,6 +577,7 @@ class AstParser {
             is RedshiftSqlParser.C_expr_caseContext -> parseCaseExpression(cContext.case_expr())
             is RedshiftSqlParser.C_expr_funcContext -> parseFunctionExpression(cContext.func_expr())
             is RedshiftSqlParser.C_expr_implicit_rowContext -> parseImplicitRowExpression(cContext)
+            is RedshiftSqlParser.C_expr_selectContext -> parseSelectInParenthesesWithIndirection(cContext)
             else -> throw IllegalArgumentException("Unknown C expression type: ${cContext.javaClass.simpleName}")
         }
     }
@@ -744,6 +748,24 @@ class AstParser {
     private fun parseImplicitRowExpression(implicitRowContext: RedshiftSqlParser.C_expr_implicit_rowContext): Ast_Expression {
         // TODO
         throw UnsupportedOperationException("Implicit row expressions are not supported yet: ${implicitRowContext.text}")
+    }
+
+    private fun parseSelectInParenthesesWithIndirection(selectIndirectionContext: RedshiftSqlParser.C_expr_selectContext): Ast_Expression {
+        val selectStatement = parseSelectStatementWithParentheses(selectIndirectionContext.select_with_parens())
+        val indirections: List<Ast_Indirection>? = selectIndirectionContext.indirection()?.indirection_el()?.map {
+            if (it.OPEN_BRACKET() != null) {
+                throw UnsupportedOperationException("Array indexing is not supported yet: ${it.text}")
+            } else if (it.DOT() != null) {
+                Ast_Indirection(it, it.attr_name()!!.text)
+            } else {
+                throw IllegalArgumentException("Unexpected column reference part: ${it.text}")
+            }
+        }
+        return Ast_SelectExpression(
+            selectIndirectionContext,
+            selectStatement,
+            indirections
+        )
     }
 
     fun parseFromClause(fromContext: RedshiftSqlParser.From_clauseContext): Ast_From {

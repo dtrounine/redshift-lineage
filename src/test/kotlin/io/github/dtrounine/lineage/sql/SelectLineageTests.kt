@@ -114,4 +114,51 @@ class SelectLineageTests {
               - other_users
         """
     )
+
+    @Test
+    fun testSelectLineage_WhereExpression() = assertLineage(
+        """
+            SELECT id, name, age 
+            INTO new_users
+            FROM users 
+            WHERE age BETWEEN (SELECT MIN(age) FROM adult_users) AND (SELECT MAX(age) FROM retired_users);
+        """,
+        """
+            lineage:
+              new_users:
+                - users
+                - adult_users
+                - retired_users
+            sources:
+              - users
+              - adult_users
+              - retired_users
+        """
+    )
+
+    @Test
+    fun testSelectLineage_TargetExpression() = assertLineage(
+            """
+                SELECT 
+                    id, name, age,
+                    age IN (
+                        SELECT age FROM adult_users
+                        UNION ALL
+                        SELECT age FROM retired_users
+                    ) AS is_adult_or_retired
+                INTO new_users
+                FROM users 
+            """,
+            """
+                lineage:
+                  new_users:
+                    - users
+                    - adult_users
+                    - retired_users
+                sources:
+                  - users
+                  - adult_users
+                  - retired_users
+            """
+        )
 }

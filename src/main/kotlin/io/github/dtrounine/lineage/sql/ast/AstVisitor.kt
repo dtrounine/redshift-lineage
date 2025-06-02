@@ -34,6 +34,7 @@ interface AstVisitor {
     fun visitAst_CollateExpression(expr: Ast_CollateExpression)
     fun visitAst_CastExpression(expr: Ast_CastExpression)
     fun visitAst_ExistsExpression(expr: Ast_ExistsExpression)
+    fun visitAst_SelectExpression(expr: Ast_SelectExpression)
     fun visitAst_ColumnReference(expr: Ast_ColumnReference)
     fun visitAst_ConstantExpression(expr: Ast_ConstantExpression)
     fun visitAst_CaseExpression(expr: Ast_CaseExpression)
@@ -50,4 +51,5 @@ interface AstVisitor {
     fun visitAst_CreateTableWithColumnDefinitions(stmt: Ast_CreateTableWithColumnDefinitions)
     fun visitAst_CreateTableAsSelect(stmt: Ast_CreateTableAsSelect)
     fun visitAst_ColumnDefinition(def: Ast_ColumnDefinition)
+    fun visitAst_Indirection(ind: Ast_Indirection)
 }

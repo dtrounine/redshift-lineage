@@ -54,16 +54,47 @@ class TableLineageExtractor {
 
     private fun getSimpleSelectLineage(select: Ast_CoreSelectClause): LineageData {
         val fromLineage = select.from?.let { getLineage(it) } ?: LineageData.newEmpty()
+        val allTargetSources: MutableSet<String> = mutableSetOf()
+        select.targets.forEach { target ->
+            when (target) {
+                is Ast_ColumnSelectTarget -> {
+                    val exprSources = getExpressionSources(target.expression)
+                    allTargetSources.addAll(exprSources)
+                }
+                else -> {
+                    // Star target or other targets do not add lineage, they just select all columns
+                }
+            }
+        }
+        val whereSources = select.where?.let { where ->
+            getExpressionSources(where)
+        } ?: emptySet()
 
-        return select.into?.let {
+        var result = fromLineage
+
+        if (allTargetSources.isNotEmpty()) {
+            result = result.mergeAll(LineageData(
+                lineage = emptyMap(),
+                sources = allTargetSources
+            ))
+        }
+        if (whereSources.isNotEmpty()) {
+            result = result.mergeAll(LineageData(
+                lineage = emptyMap(),
+                sources = whereSources
+            ))
+        }
+
+        select.into?.let {
             val targetTable = it.tableFqn
             val intoLineage = LineageData(
-                lineage = mapOf(targetTable to fromLineage.sources),
+                lineage = mapOf(targetTable to result.sources),
                 sources = emptySet()
             )
-            fromLineage.mergeAll(intoLineage)
-        } ?: fromLineage
+            result = result.mergeAll(intoLineage)
+        }
 
+        return result
     }
 
     private fun getLineage(from: Ast_From): LineageData {
@@ -133,9 +164,12 @@ class TableLineageExtractor {
 
     private fun getDeleteLineage(delete: Ast_DeleteStatement): LineageData {
         val targetTable = delete.from.tableFqn
+        val whereSources = delete.where?.let { where ->
+            getExpressionSources(where)
+        } ?: emptySet()
         val deleteLineage = LineageData(
-            lineage = mapOf(targetTable to emptySet()),
-            sources = emptySet()
+            lineage = mapOf(targetTable to whereSources),
+            sources = whereSources
         )
         val cteLineage = getCteLineage(delete.with)
         val deletedLineage = resolvedTransitiveLineage(deleteLineage, cteLineage.lineage)
@@ -151,6 +185,23 @@ class TableLineageExtractor {
         )
         return createLineage.mergeOnlyLineage(sourcesLineage)
     }
+
+    private fun getExpressionSources(expr: Ast_Expression): Set<String> {
+        val sources = mutableSetOf<String>()
+        val sourceTablesAccumulator: AstVisitor = object : AbstractAstVisitor() {
+
+            override fun visitAst_SimpleFromTableRef(fromTable: Ast_SimpleFromTableRef) {
+                sources.add(fromTable.tableFqn)
+            }
+
+            override fun visitAst_SimpleFromSubQueryRef(subQuery: Ast_SimpleFromSubQuery) {
+                sources.addAll(getLineage(subQuery.subQuery).sources)
+            }
+        }
+        expr.accept(sourceTablesAccumulator)
+        return sources
+    }
+
 
     private fun resolvedTransitiveSources(
         sources: Set<String>,

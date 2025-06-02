@@ -451,11 +451,11 @@ class AstParser {
     private fun parseAddExpression(addContext: RedshiftSqlParser.A_expr_addContext): Ast_Expression {
         var res = parseMulExpression(addContext.a_expr_mul())
         addContext.a_expr_add_rest_()?.let {
-            for (i in it.a_expr_mul().indices) {
-                val right = parseMulExpression(it.a_expr_mul(i)!!)
-                val operator = if (it.PLUS(i) != null) {
+            it.a_expr_add_term_().forEach { term ->
+                val right = parseMulExpression(term.a_expr_mul())
+                val operator = if (term.PLUS() != null) {
                     BinaryOperator.ADD
-                } else if (it.MINUS(i) != null) {
+                } else if (term.MINUS() != null) {
                     BinaryOperator.SUBTRACT
                 } else {
                     throw IllegalArgumentException("Unknown add operator: ${it.text}")
@@ -474,13 +474,13 @@ class AstParser {
     fun parseMulExpression(mulContext: RedshiftSqlParser.A_expr_mulContext): Ast_Expression {
         var res = parseCaretExpression(mulContext.a_expr_caret())
         mulContext.a_expr_mul_rest_()?.let {
-            for (i in it.a_expr_caret().indices) {
-                val right = parseCaretExpression(it.a_expr_caret(i)!!)
-                val operator = if (it.STAR(i) != null) {
+            it.a_expr_mul_term_().forEach { term ->
+                val right = parseCaretExpression(term.a_expr_caret())
+                val operator = if (term.STAR() != null) {
                     BinaryOperator.MULTIPLY
-                } else if (it.SLASH(i) != null) {
+                } else if (term.SLASH() != null) {
                     BinaryOperator.DIVIDE
-                } else if (it.PERCENT(i) != null) {
+                } else if (term.PERCENT() != null) {
                     BinaryOperator.MODULO
                 } else {
                     throw IllegalArgumentException("Unknown multiplicative operator: ${it.text}")

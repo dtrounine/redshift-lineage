@@ -476,7 +476,11 @@ a_expr_add
     ;
 
 a_expr_add_rest_
-    : ( (MINUS | PLUS) a_expr_mul )+
+    : a_expr_add_term_+
+    ;
+
+a_expr_add_term_
+    : (MINUS | PLUS) a_expr_mul
     ;
 
 /* 6*/
@@ -486,7 +490,11 @@ a_expr_mul
     ;
 
 a_expr_mul_rest_
-    : ( (STAR | SLASH | PERCENT) a_expr_caret )+
+    : a_expr_mul_term_+
+    ;
+
+a_expr_mul_term_
+    : (STAR | SLASH | PERCENT) a_expr_caret
     ;
 
 /* 5*/

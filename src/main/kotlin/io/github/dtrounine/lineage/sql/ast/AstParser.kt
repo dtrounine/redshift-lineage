@@ -840,7 +840,7 @@ class AstParser {
     }
 
     fun parseJoinType(joinTypeContext: RedshiftSqlParser.Join_typeContext): Ast_QualifiedJoinOperator {
-        val joinType = when (joinTypeContext.text) {
+        val joinType = when (joinTypeContext.text.uppercase()) {
             "INNER" -> JoinType.INNER
             "LEFT" -> JoinType.LEFT
             "RIGHT" -> JoinType.RIGHT

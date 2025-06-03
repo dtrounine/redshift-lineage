@@ -824,6 +824,7 @@ select_comb_op
 simple_select
     :
         SELECT
+            top_clause?
 	        distinct_clause?
 	        target_list
 		    into_clause?
@@ -849,6 +850,10 @@ simple_select
 
 values_clause
     : VALUES OPEN_PAREN expr_list CLOSE_PAREN (COMMA OPEN_PAREN expr_list CLOSE_PAREN)*
+    ;
+
+top_clause
+    : TOP iconst
     ;
 
 distinct_clause
@@ -1679,6 +1684,7 @@ unreserved_keyword
     | TEMPORARY
     | TEXT_P
     | TIES
+    | TOP
     | TRANSACTION
     | TRANSFORM
     | TRIGGER

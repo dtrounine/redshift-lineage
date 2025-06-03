@@ -17,4 +17,17 @@ class SelectTests {
               - users
         """
     )
+
+    @Test
+    fun testTop() = assertLineage(
+        """
+            SELECT TOP 10 id, name, age
+            FROM users;
+        """,
+        """
+            lineage: {}
+            sources:
+              - users
+        """
+    )
 }

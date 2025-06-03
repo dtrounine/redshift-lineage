@@ -798,8 +798,8 @@ select_with_parens
     ;
 
 select_no_parens
-    : select_clause sort_clause?
-    | with_clause select_clause sort_clause?
+    : select_clause sort_clause? select_limit?
+    | with_clause select_clause sort_clause? select_limit?
     ;
 
 select_clause
@@ -1022,6 +1022,29 @@ sortby
     : a_expr asc_desc_?
 //    | a_expr (USING qual_all_op | asc_desc_?) nulls_order_?
     ;
+
+select_limit
+    : limit_clause offset_clause?
+    | offset_clause limit_clause?
+    ;
+
+limit_clause
+    : LIMIT select_limit_value (COMMA select_offset_value)?
+    ;
+
+offset_clause
+    : OFFSET select_offset_value
+    ;
+
+select_limit_value
+    : a_expr
+    | ALL
+    ;
+
+select_offset_value
+    : a_expr
+    ;
+
 
 qual_all_op
     : all_op

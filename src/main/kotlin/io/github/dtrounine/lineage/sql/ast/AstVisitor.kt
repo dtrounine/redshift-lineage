@@ -52,4 +52,6 @@ interface AstVisitor {
     fun visitAst_CreateTableAsSelect(stmt: Ast_CreateTableAsSelect)
     fun visitAst_ColumnDefinition(def: Ast_ColumnDefinition)
     fun visitAst_Indirection(ind: Ast_Indirection)
+    fun visitAst_ReservedBinaryOperator(op: Ast_ReservedBinaryOperator)
+    fun visitAst_QualifiedBinaryOperator(op: Ast_QualifiedBinaryOperator)
 }

@@ -342,15 +342,39 @@ enum class BinaryOperator {
     AT_TIME_ZONE,
 }
 
+sealed class Ast_BinaryOperator<T>(
+    override val context: ParserRuleContext,
+    open val operator: T
+): Ast_Expression(context)
+
+data class Ast_ReservedBinaryOperator(
+    override val context: ParserRuleContext,
+    override val operator: BinaryOperator
+): Ast_BinaryOperator<BinaryOperator>(context, operator) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_ReservedBinaryOperator(this)
+    }
+}
+
+data class Ast_QualifiedBinaryOperator(
+    override val context: ParserRuleContext,
+    override val operator: String
+): Ast_BinaryOperator<String>(context, operator) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_QualifiedBinaryOperator(this)
+    }
+}
+
 class Ast_BinaryOperatorExpression(
     override val context: ParserRuleContext,
     val left: Ast_Expression,
     val right: Ast_Expression,
-    val operator: BinaryOperator
+    val operator: Ast_BinaryOperator<*>
 ): Ast_Expression(context) {
     override fun accept(visitor: AstVisitor) {
         visitor.visitAst_BinaryOperatorExpression(this)
         left.accept(visitor)
+        operator.accept(visitor)
         right.accept(visitor)
     }
 }

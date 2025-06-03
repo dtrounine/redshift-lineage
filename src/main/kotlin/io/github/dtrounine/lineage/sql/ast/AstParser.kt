@@ -1,6 +1,7 @@
 package io.github.dtrounine.lineage.sql.ast
 
 import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlParser
+import org.antlr.v4.kotlinruntime.ParserRuleContext
 
 class AstParser {
 
@@ -192,7 +193,7 @@ class AstParser {
                     lessLessContext,
                     res,
                     right,
-                    operator
+                    Ast_ReservedBinaryOperator(lessLessContext, operator)
                 )
             }
             res
@@ -209,7 +210,7 @@ class AstParser {
                 orContext,
                 res,
                 right,
-                BinaryOperator.OR
+                Ast_ReservedBinaryOperator(orContext, BinaryOperator.OR)
             )
         }
         return res
@@ -223,7 +224,7 @@ class AstParser {
                 andContext,
                 res,
                 right,
-                BinaryOperator.AND
+                Ast_ReservedBinaryOperator(andContext, BinaryOperator.AND)
             )
         }
         return res
@@ -368,7 +369,7 @@ class AstParser {
                 isNotContext,
                 expression,
                 right,
-                operator
+                Ast_ReservedBinaryOperator(isNotContext, operator)
             )
         } else {
             throw IllegalArgumentException("Unsupported IS (NOT)? expression: ${isNotContext.text}")
@@ -400,7 +401,7 @@ class AstParser {
             compareContext,
             left,
             right,
-            op
+            Ast_ReservedBinaryOperator(compareContext, op)
         )
     }
 
@@ -432,12 +433,18 @@ class AstParser {
     }
 
     private fun parseQualOpExpression(qualOpContextext: RedshiftSqlParser.A_expr_qual_opContext): Ast_Expression {
-        val left = parseUnaryQualOpExpression(qualOpContextext.a_expr_unary_qualop(0)!!)
-        if (qualOpContextext.a_expr_unary_qualop().size != 1) {
-            throw UnsupportedOperationException("Multiple unary qualified operators are not supported yet: ${qualOpContextext.text}")
+        var res = parseUnaryQualOpExpression(qualOpContextext.a_expr_unary_qualop(0)!!)
+        for (i in 1 until qualOpContextext.a_expr_unary_qualop().size) {
+            val right = parseUnaryQualOpExpression(qualOpContextext.a_expr_unary_qualop(i)!!)
+            val operator = Ast_QualifiedBinaryOperator(qualOpContextext.qual_op(i - 1)!!, qualOpContextext.qual_op(i - 1)!!.text)
+            res = Ast_BinaryOperatorExpression(
+                qualOpContextext,
+                res,
+                right,
+                operator
+            )
         }
-        return left
-
+        return res
     }
 
     private fun parseUnaryQualOpExpression(unaryQualOpContext: RedshiftSqlParser.A_expr_unary_qualopContext): Ast_Expression {
@@ -464,7 +471,7 @@ class AstParser {
                     addContext,
                     res,
                     right,
-                    operator
+                    Ast_ReservedBinaryOperator(term, operator)
                 )
             }
         }
@@ -489,7 +496,7 @@ class AstParser {
                     mulContext,
                     res,
                     right,
-                    operator
+                    Ast_ReservedBinaryOperator(term, operator)
                 )
             }
         }
@@ -504,7 +511,7 @@ class AstParser {
                 caretContext,
                 left,
                 right,
-                BinaryOperator.CARET
+                Ast_ReservedBinaryOperator(caretContext, BinaryOperator.CARET)
             )
         } else {
             left
@@ -537,7 +544,7 @@ class AstParser {
                 atTimezoneContext,
                 left,
                 right,
-                BinaryOperator.AT_TIME_ZONE
+                Ast_ReservedBinaryOperator(atTimezoneContext, BinaryOperator.AT_TIME_ZONE)
             )
         }
         return left

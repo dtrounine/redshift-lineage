@@ -154,4 +154,10 @@ abstract class AbstractAstVisitor: AstVisitor {
 
     override fun visitAst_Indirection(ind: Ast_Indirection) {
     }
+
+    override fun visitAst_ReservedBinaryOperator(op: Ast_ReservedBinaryOperator) {
+    }
+
+    override fun visitAst_QualifiedBinaryOperator(op: Ast_QualifiedBinaryOperator) {
+    }
 }

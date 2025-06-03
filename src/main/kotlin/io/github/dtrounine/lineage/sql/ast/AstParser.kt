@@ -713,6 +713,9 @@ class AstParser {
                     subExpressions.add(parseExpression(exprContext))
                 }
             }
+            it.extract_list()?.let { extractList ->
+                subExpressions.add(parseExpression(extractList.a_expr()))
+            }
             return Ast_CommonFunctionCallExpression(
                 funcContext,
                 it.text,

@@ -1069,7 +1069,7 @@ func_expr_common_subexpr
     | CURRENT_CATALOG
     | CURRENT_SCHEMA
     | CAST OPEN_PAREN a_expr AS typename CLOSE_PAREN
-//    | EXTRACT OPEN_PAREN extract_list? CLOSE_PAREN
+    | EXTRACT OPEN_PAREN extract_list? CLOSE_PAREN
     | NORMALIZE OPEN_PAREN a_expr (COMMA unicode_normal_form)? CLOSE_PAREN
 //    | OVERLAY OPEN_PAREN (overlay_list | func_arg_list? ) CLOSE_PAREN
 //    | POSITION OPEN_PAREN position_list? CLOSE_PAREN
@@ -1225,6 +1225,21 @@ jsonType
     : JSON
     ;
 
+
+extract_list
+    : extract_arg FROM a_expr
+    ;
+
+extract_arg
+    : identifier
+    | YEAR_P
+    | MONTH_P
+    | DAY_P
+    | HOUR_P
+    | MINUTE_P
+    | SECOND_P
+    | sconst
+    ;
 
 /*****************************************************************************
  *

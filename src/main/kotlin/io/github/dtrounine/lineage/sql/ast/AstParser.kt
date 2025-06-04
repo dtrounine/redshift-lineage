@@ -77,7 +77,7 @@ class AstParser {
         val orders = sortClauseContext.sortby_list().sortby().map { sortByContext ->
             val expression = parseExpression(sortByContext.a_expr())
             val orderType = sortByContext.asc_desc_()?.let {
-                when (it.text) {
+                when (it.text.uppercase()) {
                     "ASC" -> SortOrderType.ASC
                     "DESC" -> SortOrderType.DESC
                     else -> throw IllegalArgumentException("Unknown sort order: ${it.text}")

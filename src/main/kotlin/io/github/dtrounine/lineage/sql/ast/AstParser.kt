@@ -115,7 +115,7 @@ class AstParser {
     }
 
     private fun parseSelectCombineOperator(selectCombOp: RedshiftSqlParser.Select_comb_opContext): Ast_SelectCombineOperator {
-        val operatorType = when (selectCombOp.text) {
+        val operatorType = when (selectCombOp.text.uppercase()) {
             "UNION" -> SelectCombineOperatorType.UNION
             "EXCEPT" -> SelectCombineOperatorType.EXCEPT
             else -> throw IllegalArgumentException("Unknown select combine operator: ${selectCombOp.text}")
@@ -126,7 +126,7 @@ class AstParser {
     private fun parseSelectCombineOperatorModifier(
         all_or_distinct_Context: RedshiftSqlParser.All_or_distinctContext
     ): SelectCombineOperatorModifier {
-        val modifierType = when (all_or_distinct_Context.text) {
+        val modifierType = when (all_or_distinct_Context.text.uppercase()) {
             "ALL" -> SelectCombineOperatorModifier.ALL
             "DISTINCT" -> SelectCombineOperatorModifier.DISTINCT
             else -> throw IllegalArgumentException("Unknown select combine operator modifier: ${all_or_distinct_Context.text}")

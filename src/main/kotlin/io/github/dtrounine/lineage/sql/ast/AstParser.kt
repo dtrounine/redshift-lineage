@@ -690,6 +690,7 @@ class AstParser {
             val isDistinct = funcAppContext.DISTINCT() != null
             val isAll = funcAppContext.ALL() != null
             val isStar = funcAppContext.STAR() != null
+            val isIgnoreNulls = funcAppContext.ignore_nulls() != null
             if (funcAppContext.VARIADIC() != null) {
                 throw UnsupportedOperationException("Variadic functions are not supported yet: ${funcAppContext.text}")
             }
@@ -704,6 +705,7 @@ class AstParser {
                 isAll,
                 isDistinct,
                 isStar,
+                isIgnoreNulls,
                 sort,
                 withinGroup,
                 filter,

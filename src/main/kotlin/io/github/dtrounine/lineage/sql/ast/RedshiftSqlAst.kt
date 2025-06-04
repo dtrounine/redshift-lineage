@@ -611,6 +611,7 @@ data class Ast_FunctionCallExpression(
     val isAll: Boolean,
     val isDistinct: Boolean,
     val isStar: Boolean,
+    val isIgnoreNulls: Boolean,
     val sort: Ast_SortClause?,
     val withinGroup: Ast_SortClause?,
     val filter: Ast_Expression?,

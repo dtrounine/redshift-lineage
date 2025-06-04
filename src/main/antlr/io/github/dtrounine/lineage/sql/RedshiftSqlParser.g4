@@ -655,12 +655,16 @@ param_name
 
 func_application
     : func_name OPEN_PAREN (
-        func_arg_list (COMMA VARIADIC func_arg_expr)? sort_clause?
-        | VARIADIC func_arg_expr sort_clause?
-        | (ALL | DISTINCT) func_arg_list sort_clause?
+        func_arg_list (COMMA VARIADIC func_arg_expr)? ignore_nulls? sort_clause?
+        | VARIADIC func_arg_expr ignore_nulls? sort_clause?
+        | (ALL | DISTINCT) func_arg_list ignore_nulls? sort_clause?
         | STAR
         |
     ) CLOSE_PAREN
+    ;
+
+ignore_nulls
+    : IGNORE NULLS_P
     ;
 
 func_expr
@@ -1508,6 +1512,7 @@ unreserved_keyword
     | HOUR_P
     | IDENTITY_P
     | IF_P
+    | IGNORE
     | IMMEDIATE
     | IMMUTABLE
     | IMPLICIT_P

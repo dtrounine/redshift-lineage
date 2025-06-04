@@ -99,6 +99,23 @@ data class Ast_CoreSelectClause(
 }
 
 /**
+ * Represents a nested SELECT statement as a clause.
+ * This is used for subqueries in the FROM clause or as a value source.
+ *
+ * SELECT ... FROM (WITH ... SELECT ...)
+ *                  ^^^^^^^^^^^^^^^^^^^
+ */
+data class Ast_NestedSelectStatementClause(
+    override val context: ParserRuleContext,
+    val selectStatement: Ast_SelectStatement
+): Ast_SelectClause(context) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_NestedSelectStatementClause(this)
+        selectStatement.accept(visitor)
+    }
+}
+
+/**
  * Represents a VALUES clause in SQL.
  * Note: grammatically, it is a SELECT clause.
  *

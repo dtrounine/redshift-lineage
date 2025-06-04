@@ -49,6 +49,7 @@ class TableLineageExtractor {
             }
             is Ast_CoreSelectClause ->  getSimpleSelectLineage(select)
             is Ast_ValuesSelectClause -> LineageData.newEmpty() // Values clause does not have lineage
+            is Ast_NestedSelectStatementClause -> getSelectLineage(select.selectStatement)
         }
     }
 

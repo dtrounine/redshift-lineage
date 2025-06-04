@@ -138,6 +138,10 @@ class AstParser {
         return when (simpleSelectContext) {
             is RedshiftSqlParser.StandardSimpleSelectContext -> parseStandardSelect(simpleSelectContext)
             is RedshiftSqlParser.ValuesSimpleSelectContext -> parseValuesSelect(simpleSelectContext)
+            is RedshiftSqlParser.SelectWithParenthesesSimpleSelectContext -> Ast_NestedSelectStatementClause(
+                simpleSelectContext,
+                parseSelectStatementWithParentheses(simpleSelectContext.select_with_parens())
+            )
             else -> throw IllegalArgumentException("Unknown simple select type: ${simpleSelectContext.javaClass.simpleName}")
         }
     }

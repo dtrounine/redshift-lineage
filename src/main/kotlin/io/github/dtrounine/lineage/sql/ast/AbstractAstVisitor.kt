@@ -160,4 +160,7 @@ abstract class AbstractAstVisitor: AstVisitor {
 
     override fun visitAst_QualifiedBinaryOperator(op: Ast_QualifiedBinaryOperator) {
     }
+
+    override fun visitAst_NestedSelectStatementClause(stmt: Ast_NestedSelectStatementClause) {
+    }
 }

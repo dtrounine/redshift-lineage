@@ -138,7 +138,7 @@ class SelectLineageTests {
 
     @Test
     fun testSelectLineage_TargetExpression() = assertLineage(
-            """
+        """
                 SELECT 
                     id, name, age,
                     age IN (
@@ -149,7 +149,7 @@ class SelectLineageTests {
                 INTO new_users
                 FROM users 
             """,
-            """
+        """
                 lineage:
                   new_users:
                     - users
@@ -160,5 +160,34 @@ class SelectLineageTests {
                   - adult_users
                   - retired_users
             """
-        )
+    )
+
+    @Test
+    fun testNestedSelectStatementLineage() = assertLineage(
+        """
+            SELECT id, name, age
+            INTO new_users
+            FROM (
+                (
+                    WITH preprocessed_users AS 
+                    (
+                        SELECT id, name, age FROM users
+                    )
+                    SELECT * FROM preprocessed_users 
+                )
+                UNION ALL
+                SELECT id, name, age FROM other_users
+            ) AS combined_users;
+        """,
+        """
+            lineage:
+              new_users:
+                - users
+                - other_users
+            sources:
+              - users
+              - other_users
+        """
+    )
+
 }

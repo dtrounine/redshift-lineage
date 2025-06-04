@@ -228,7 +228,8 @@ tableelement
     ;
 
 columnDef
-    : colid typename column_attributes?
+    : colid typename column_attributes? column_constraints?
+    | colid typename column_constraints? column_attributes?
 //    | colid typename create_generic_options? colquallist
     ;
 
@@ -242,6 +243,15 @@ column_attribute
     | SORTKEY
     ;
 
+column_constraints
+    : column_constraint (COMMA column_constraint)*
+    ;
+
+column_constraint
+    : NOT? NULL_P
+    | UNIQUE
+    | PRIMARY KEY
+    ;
 
 encoding
     : AZ64
@@ -860,7 +870,7 @@ simple_select
 //      )
     | values_clause                 # ValuesSimpleSelect
 //    | TABLE relation_expr
-//    | select_with_parens
+    | select_with_parens            # SelectWithParenthesesSimpleSelect
     ;
 
 values_clause

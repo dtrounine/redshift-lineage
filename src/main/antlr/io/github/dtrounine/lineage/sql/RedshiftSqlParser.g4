@@ -228,9 +228,20 @@ tableelement
     ;
 
 columnDef
-    : colid typename ( ENCODE encoding )?
+    : colid typename column_attributes?
 //    | colid typename create_generic_options? colquallist
     ;
+
+column_attributes
+    : column_attribute+
+    ;
+
+column_attribute
+    : ENCODE encoding
+    | DISTKEY
+    | SORTKEY
+    ;
+
 
 encoding
     : AZ64

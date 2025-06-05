@@ -348,6 +348,20 @@ class AstParser {
                     UnaryOperator.IS_TRUE
                 )
             }
+        } else if (isNotContext.FALSE_P() != null) {
+            if (isNot) {
+                Ast_UnaryOperatorExpression(
+                    isNotContext,
+                    expression,
+                    UnaryOperator.IS_TRUE
+                )
+            } else {
+                Ast_UnaryOperatorExpression(
+                    isNotContext,
+                    expression,
+                    UnaryOperator.IS_FALSE
+                )
+            }
         } else if (isNotContext.UNKNOWN() != null) {
             if (isNot) {
                 Ast_UnaryOperatorExpression(

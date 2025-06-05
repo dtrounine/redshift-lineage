@@ -1126,6 +1126,7 @@ func_expr_common_subexpr
     | NORMALIZE OPEN_PAREN a_expr (COMMA unicode_normal_form)? CLOSE_PAREN
 //    | OVERLAY OPEN_PAREN (overlay_list | func_arg_list? ) CLOSE_PAREN
 //    | POSITION OPEN_PAREN position_list? CLOSE_PAREN
+    | SUBSTRING OPEN_PAREN (func_arg_list?) CLOSE_PAREN
 //    | SUBSTRING OPEN_PAREN (substr_list | func_arg_list?) CLOSE_PAREN
     | TREAT OPEN_PAREN a_expr AS typename CLOSE_PAREN
 //    | TRIM OPEN_PAREN (BOTH | LEADING | TRAILING)? trim_list CLOSE_PAREN

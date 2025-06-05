@@ -729,6 +729,9 @@ class AstParser {
             it.extract_list()?.let { extractList ->
                 subExpressions.add(parseExpression(extractList.a_expr()))
             }
+            it.func_arg_list()?.func_arg_expr()?.forEach { funcArg ->
+                subExpressions.add(parseExpression(funcArg.a_expr()))
+            }
             return Ast_CommonFunctionCallExpression(
                 funcContext,
                 it.text,

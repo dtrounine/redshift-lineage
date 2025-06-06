@@ -87,8 +87,10 @@ data class Ast_CoreSelectClause(
     val targets: List<Ast_SelectTarget>,
     val from: Ast_From?,
     val into: Ast_OptTempTableName?,
-    val where: Ast_Expression?
-    // TODO: add GROUP BY, HAVING, WINDOW etc.
+    val where: Ast_Expression?,
+    val having: Ast_Expression?,
+    val qualify: Ast_Expression?
+    // TODO: add GROUP BY, WINDOW etc.
 ): Ast_SelectClause(context) {
     override fun accept(visitor: AstVisitor) {
         visitor.visitAst_CoreSelectClause(this)

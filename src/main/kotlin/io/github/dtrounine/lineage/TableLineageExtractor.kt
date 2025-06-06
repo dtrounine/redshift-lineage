@@ -67,9 +67,10 @@ class TableLineageExtractor {
                 }
             }
         }
-        val whereSources = select.where?.let { where ->
-            getExpressionSources(where)
-        } ?: emptySet()
+        val additionalClauseSource: MutableSet<String> = mutableSetOf()
+        select.where?.let { additionalClauseSource.addAll(getExpressionSources(it)) }
+        select.having?.let { additionalClauseSource.addAll(getExpressionSources(it)) }
+        select.qualify?.let { additionalClauseSource.addAll(getExpressionSources(it)) }
 
         var result = fromLineage
 
@@ -79,10 +80,10 @@ class TableLineageExtractor {
                 sources = allTargetSources
             ))
         }
-        if (whereSources.isNotEmpty()) {
+        if (additionalClauseSource.isNotEmpty()) {
             result = result.mergeAll(LineageData(
                 lineage = emptyMap(),
-                sources = whereSources
+                sources = additionalClauseSource
             ))
         }
 

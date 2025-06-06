@@ -157,10 +157,10 @@ class AstParser {
         }
         val from: Ast_From? = selectContext.from_clause()?.let { parseFromClause(it) }
         val into: Ast_OptTempTableName? = selectContext.into_clause()?.let { parseIntoClause(it) }
-        val where: Ast_Expression? = selectContext.where_clause()?.let { whereContext ->
-            parseExpression(whereContext.a_expr())
-        }
-        return Ast_CoreSelectClause(selectContext, isDistinct, targets, from, into, where)
+        val where: Ast_Expression? = selectContext.where_clause()?.let { parseExpression(it.a_expr()) }
+        val having: Ast_Expression? = selectContext.having_clause()?.let { parseExpression(it.a_expr()) }
+        val qualify: Ast_Expression? = selectContext.qualify_clause()?.let { parseExpression(it.a_expr()) }
+        return Ast_CoreSelectClause(selectContext, isDistinct, targets, from, into, where, having, qualify)
     }
 
     private fun parseValuesSelect(valuesContext: RedshiftSqlParser.ValuesSimpleSelectContext): Ast_ValuesSelectClause {

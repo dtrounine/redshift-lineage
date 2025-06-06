@@ -857,6 +857,7 @@ simple_select
 		    where_clause?
 		    group_clause?
 		    having_clause?
+		    qualify_clause?
 		    window_clause?          # StandardSimpleSelect
 //    | (
 //        SELECT
@@ -909,6 +910,10 @@ group_by_item
 
 having_clause
     : HAVING a_expr
+    ;
+
+qualify_clause
+    : QUALIFY a_expr
     ;
 
 window_clause
@@ -1930,6 +1935,7 @@ reserved_keyword
     | PRIMARY
     | REFERENCES
     | RETURNING
+    | QUALIFY
     | SELECT
     | SESSION_USER
     | SOME

@@ -190,4 +190,22 @@ class SelectLineageTests {
         """
     )
 
+    @Test
+    fun testSelectQualifyLineage() = assertLineage(
+        """
+            SELECT id, name, MAX(age) OVER(PARTITION BY id ORDER BY age) AS max_age
+            INTO new_users
+            FROM users
+            QUALIFY max_age > (SELECT AVG(age) FROM ref_users);
+        """,
+        """
+            lineage:
+              new_users:
+                - users
+                - ref_users
+            sources:
+              - users
+              - ref_users
+        """
+    )
 }

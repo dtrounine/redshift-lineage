@@ -785,20 +785,31 @@ class AstParser {
 
     private fun parseSelectInParenthesesWithIndirection(selectIndirectionContext: RedshiftSqlParser.C_expr_selectContext): Ast_Expression {
         val selectStatement = parseSelectStatementWithParentheses(selectIndirectionContext.select_with_parens())
-        val indirections: List<Ast_Indirection>? = selectIndirectionContext.indirection()?.indirection_el()?.map {
-            if (it.OPEN_BRACKET() != null) {
-                throw UnsupportedOperationException("Array indexing is not supported yet: ${it.text}")
-            } else if (it.DOT() != null) {
-                Ast_Indirection(it, it.attr_name()!!.text)
-            } else {
-                throw IllegalArgumentException("Unexpected column reference part: ${it.text}")
-            }
+        val indirections: List<Ast_Indirection>? = selectIndirectionContext.indirection()?.let {
+            parseIndirection(it)
         }
         return Ast_SelectExpression(
             selectIndirectionContext,
             selectStatement,
             indirections
         )
+    }
+
+    private fun parseIndirection(indirectionContext: RedshiftSqlParser.IndirectionContext): List<Ast_Indirection> {
+        return indirectionContext.indirection_el().map { indirectionEl ->
+            if (indirectionEl.OPEN_BRACKET() != null) {
+                throw UnsupportedOperationException("Array indexing is not supported yet: ${indirectionEl.text}")
+            } else if (indirectionEl.DOT() != null) {
+                val attrName = parseAttrName(indirectionEl.attr_name()!!)
+                Ast_Indirection(indirectionEl, attrName)
+            } else {
+                throw IllegalArgumentException("Unexpected column reference part: ${indirectionEl.text}")
+            }
+        }
+    }
+
+    private fun parseAttrName(attrNameContext: RedshiftSqlParser.Attr_nameContext): String {
+        return parseColLabel(attrNameContext.colLabel())
     }
 
     fun parseFromClause(fromContext: RedshiftSqlParser.From_clauseContext): Ast_From {
@@ -820,7 +831,7 @@ class AstParser {
         val alias = tableRefContext.alias_clause()?.text
 
         tableRefContext.relation_expr()?.let {
-            val tableFqn = it.qualified_name().text
+            val tableFqn = parseQualifiedName(it.qualified_name())
             return Ast_SimpleFromTableRef(
                 tableRefContext,
                 tableFqn,
@@ -888,7 +899,7 @@ class AstParser {
 
     fun parseIntoClause(intoClauseContext: RedshiftSqlParser.Into_clauseContext): Ast_OptTempTableName {
         val optTempTableName = intoClauseContext.opttempTableName()
-        val tableFqn = optTempTableName.qualified_name().text
+        val tableFqn = parseQualifiedName(optTempTableName.qualified_name())
         val isTemporary = (optTempTableName.TEMPORARY() != null) or (optTempTableName.TEMP() != null)
         return Ast_OptTempTableName(
             intoClauseContext,
@@ -923,7 +934,7 @@ class AstParser {
     }
 
     fun parseInsertTarget(insertTargetContext: RedshiftSqlParser.Insert_targetContext): Ast_InsertTarget {
-        val tableFqn = insertTargetContext.qualified_name().text
+        val tableFqn = parseQualifiedName(insertTargetContext.qualified_name())
         val alias = insertTargetContext.colid()?.text
         val columns = insertTargetContext.target_columns()?.colid()?.map { it.text }
         return Ast_InsertTarget(insertTargetContext, tableFqn, alias, columns)
@@ -932,7 +943,7 @@ class AstParser {
     fun parseDeleteStatement(deleteStatementContext: RedshiftSqlParser.DeletestmtContext): Ast_DeleteStatement {
         val with: List<Ast_Cte> = deleteStatementContext.with_clause()?.let { parseWithClause(it) } ?: emptyList()
         val from: Ast_SimpleFromTableRef = deleteStatementContext.relation_expr_opt_alias().let {
-            val tableFqn = it.relation_expr().qualified_name().text
+            val tableFqn = parseQualifiedName(it.relation_expr().qualified_name())
             val alias = it.colid()?.text
             Ast_SimpleFromTableRef(deleteStatementContext.relation_expr_opt_alias(), tableFqn, alias)
         }
@@ -948,7 +959,7 @@ class AstParser {
     private fun parseCreateStatement(createTableContext: RedshiftSqlParser.CreatestmtContext): Ast_CreateTableStatement {
         val ifNotExists = createTableContext.EXISTS() != null
         val isTemporary = createTableContext.opttemp() != null
-        val tableFqn = createTableContext.qualified_name().text
+        val tableFqn = parseQualifiedName(createTableContext.qualified_name())
         val rest = createTableContext.createstmt_rest_()
         return when (rest) {
             is RedshiftSqlParser.CreateStmtColumnsContext -> {
@@ -973,5 +984,47 @@ class AstParser {
             }
             else -> throw IllegalArgumentException("Unknown create table statement type: ${rest.javaClass.simpleName}")
         }
+    }
+
+    private fun parseQualifiedName(qualifiedNameContext: RedshiftSqlParser.Qualified_nameContext): String {
+        val colid = parseColId(qualifiedNameContext.colid())
+        val indirection = qualifiedNameContext.indirection()?.let {
+            parseIndirection(it)
+        }?.joinToString(".") { it.attrName }
+        return if (indirection != null) {
+            "$colid.$indirection"
+        } else {
+            colid
+        }
+    }
+
+    private fun parseColId(colidContext: RedshiftSqlParser.ColidContext): String {
+        colidContext.identifier()?.let {
+            return parseIdentifier(it)
+        }
+        return colidContext.text
+    }
+
+    private fun parseColLabel(colLabelContext: RedshiftSqlParser.ColLabelContext): String {
+        colLabelContext.identifier()?.let {
+            return parseIdentifier(it)
+        }
+        return colLabelContext.text
+    }
+
+    private fun parseIdentifier(identifierContext: RedshiftSqlParser.IdentifierContext): String {
+        identifierContext.Identifier()?.let {
+            return it.text
+        }
+        identifierContext.QuotedIdentifier()?.let {
+            return it.text.trim('\"')
+        }
+        identifierContext.UnicodeQuotedIdentifier()?.let {
+            return it.text
+        }
+        identifierContext.PLSQLVARIABLENAME()?.let {
+            return it.text
+        }
+        throw IllegalArgumentException("Unknown identifier type: ${identifierContext.text}")
     }
 }

@@ -1,6 +1,8 @@
 package io.github.dtrounine.lineage.output.simple_json
 
 import io.github.dtrounine.lineage.model.LineageData
+import io.github.dtrounine.lineage.model.LineageReport
+import io.github.dtrounine.lineage.model.SourcePosition
 import kotlinx.serialization.Serializable
 
 /**
@@ -16,14 +18,20 @@ data class LineageInfo(
     val lineage: List<LineageInfoEntry>
 ) {
     companion object {
-        fun fromLineageData(lineageData: LineageData): LineageInfo {
+        fun fromLineageData(lineageReport: LineageReport): LineageInfo {
             val entries: MutableList<LineageInfoEntry> = mutableListOf()
-            lineageData.lineage.entries.forEach { (output, inputs) ->
-                val entry = LineageInfoEntry(
-                    outputs = setOf(LineageTable(output)),
-                    inputs = inputs.map { LineageTable(it) }.toSet()
-                )
-                entries.add(entry)
+            lineageReport.statements.forEach {
+                val outputs: MutableSet<String> = mutableSetOf()
+                val inputs: MutableSet<String> = mutableSetOf()
+                it.lineage.entries.forEach { (entryOutput, entryInputs) ->
+                    outputs.add(entryOutput)
+                    inputs.addAll(entryInputs)
+                }
+                entries.add(LineageInfoEntry(
+                    outputs.map { LineageTable(it) }.toSet(),
+                    inputs.map { LineageTable(it) }.toSet(),
+                    sourcePosition = it.sourcePosition
+                ))
             }
             return LineageInfo(entries)
         }
@@ -33,7 +41,8 @@ data class LineageInfo(
 @Serializable
 data class LineageInfoEntry(
     val outputs: Set<LineageTable>,
-    val inputs: Set<LineageTable>
+    val inputs: Set<LineageTable>,
+    val sourcePosition: SourcePosition?
 )
 
 @Serializable

@@ -3,19 +3,18 @@ package io.github.dtrounine.lineage
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
+import io.github.dtrounine.lineage.model.LineageReport
+import io.github.dtrounine.lineage.model.SourcePosition
+import io.github.dtrounine.lineage.model.StatementLineageReport
+import io.github.dtrounine.lineage.model.TextPosition
 import io.github.dtrounine.lineage.output.LineageOutputWriter
 import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_JSON
 import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_OPENLINEAGE
 import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_YAML
-import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlLexer
-import io.github.dtrounine.lineage.sql.parser.generated.RedshiftSqlParser
-import io.github.dtrounine.lineage.sql.ast.AstParser
-import io.github.dtrounine.lineage.sql.ast.Ast_Statement
 import io.github.dtrounine.lineage.sql.parseRedshiftSqlToAst
-import org.antlr.v4.kotlinruntime.CharStreams
-import org.antlr.v4.kotlinruntime.CommonTokenStream
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -50,12 +49,39 @@ class RedLinCli: CliktCommand(
             OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_OPENLINEAGE, OUTPUT_FORMAT_YAML
         ).default("json")
 
+    private val splitStatements: Boolean by
+        option(
+            names = arrayOf("--split-statements"),
+            help = "Split the input into separate statements for processing. Output the lineage for each statement separately." +
+                    " This option is disabled by default."
+        )
+        .flag(default = false)
+
     override fun run() {
         getInputStream(inFile).use { inputStream ->
             getOutputStream(outFile).use { outputStream ->
                 val statements = parseRedshiftSqlToAst(inputStream)
-                val lineageData = TableLineageExtractor().getLineage(statements)
-                LineageOutputWriter(outFormat).write(lineageData, outputStream)
+                val lineageReport: LineageReport = if (splitStatements) {
+                    // Process each statement separately
+                    val statementReports = statements.map { statement ->
+                        val lineageData = TableLineageExtractor().getLineage(statement)
+                        val sourcePosition: SourcePosition? = statement.context.start?.let { start ->
+                            statement.context.stop?.let { stop ->
+                                SourcePosition(
+                                    start = TextPosition(start.line, start.charPositionInLine),
+                                    stop = TextPosition(stop.line, stop.charPositionInLine + (stop.text?.length ?: 0))
+                                )
+                            }
+                        }
+                        StatementLineageReport(lineageData.lineage, lineageData.sources, sourcePosition)
+                    }
+                    LineageReport(statementReports)
+                } else {
+                    // Process all statements at once
+                    val lineageData = TableLineageExtractor().getLineage(statements)
+                    LineageReport.fromLineageData(lineageData)
+                }
+                LineageOutputWriter(outFormat).write(lineageReport, outputStream)
             }
         }
     }

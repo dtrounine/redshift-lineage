@@ -7,4 +7,5 @@ import kotlinx.serialization.json.Json
 val prettyJson = Json {
     prettyPrint = true       // Enable pretty print
     prettyPrintIndent = "  " // Optional: set custom indent (default is 4 spaces)
+    explicitNulls = false // Optional: do not serialize null values
 }

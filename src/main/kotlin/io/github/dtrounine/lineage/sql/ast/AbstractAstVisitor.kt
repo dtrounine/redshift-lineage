@@ -163,4 +163,7 @@ abstract class AbstractAstVisitor: AstVisitor {
 
     override fun visitAst_NestedSelectStatementClause(stmt: Ast_NestedSelectStatementClause) {
     }
+
+    override fun visitAst_WithClause(with: Ast_WithClause) {
+    }
 }

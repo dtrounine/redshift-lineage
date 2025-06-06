@@ -56,7 +56,7 @@ class AstParser {
 
     private fun parseSelectStatementNoParentheses(selectContext: RedshiftSqlParser.Select_no_parensContext): Ast_SelectStatement {
         val selectClause: Ast_SelectClause = parseSelectClause(selectContext.select_clause())
-        val with: List<Ast_Cte> = selectContext.with_clause()?.let { parseWithClause(it) } ?: emptyList()
+        val with: Ast_WithClause? = selectContext.with_clause()?.let { parseWithClause(it) }
         val sortClause: Ast_SortClause? = selectContext.sort_clause()?.let { parseSortClause(it) }
         return Ast_SelectStatement(
             selectContext,
@@ -66,12 +66,22 @@ class AstParser {
         )
     }
 
-    private fun parseWithClause(withClauseContext: RedshiftSqlParser.With_clauseContext): List<Ast_Cte> =
-        withClauseContext.cte_list().common_table_expr().map { cteContext ->
+    private fun parseWithClause(withClauseContext: RedshiftSqlParser.With_clauseContext): Ast_WithClause {
+        val ctes = withClauseContext.cte_list().common_table_expr().map { cteContext ->
             val cteName = cteContext.name().text
             val selectStatement = parseSelectStatement(cteContext.selectstmt())
-            Ast_Cte(cteContext, cteName, selectStatement)
+            val columnsList = cteContext.name_list_()?.name_list()?.name()?.map { nameContext ->
+                parseColId(nameContext.colid())
+            }
+            Ast_Cte(cteContext, cteName, columnsList, selectStatement)
         }
+        val isRecursive = withClauseContext.RECURSIVE() != null
+        return Ast_WithClause(
+            withClauseContext,
+            ctes,
+            isRecursive
+        )
+    }
 
     private fun parseSortClause(sortClauseContext: RedshiftSqlParser.Sort_clauseContext): Ast_SortClause {
         val orders = sortClauseContext.sortby_list().sortby().map { sortByContext ->
@@ -746,6 +756,22 @@ class AstParser {
             it.func_arg_list()?.func_arg_expr()?.forEach { funcArg ->
                 subExpressions.add(parseExpression(funcArg.a_expr()))
             }
+            it.trim_list()?.let { trimList ->
+                trimList.a_expr()?.let { expr -> subExpressions.add(parseExpression(expr)) }
+                trimList.expr_list().a_expr().forEach { exprContext ->
+                    subExpressions.add(parseExpression(exprContext))
+                }
+            }
+            it.substr_list()?.let { substrList ->
+                substrList.a_expr().forEach { exprContext ->
+                    subExpressions.add(parseExpression(exprContext))
+                }
+            }
+            it.position_list()?.let { positionList ->
+                positionList.b_expr().forEach { exprContext ->
+                    subExpressions.add(parseBExpression(exprContext))
+                }
+            }
             return Ast_CommonFunctionCallExpression(
                 funcContext,
                 it.text,
@@ -753,6 +779,11 @@ class AstParser {
             )
         }
         throw IllegalArgumentException("Unknown function expression type: ${funcContext.text}")
+    }
+
+    private fun parseBExpression(bExpressionContext: RedshiftSqlParser.B_exprContext): Ast_Expression {
+        // TODO: support all cases of B expressions
+        return parseCExpression(bExpressionContext.c_expr())
     }
 
     private fun parseOverClause(overContext: RedshiftSqlParser.Over_clauseContext): Ast_OverClause {
@@ -922,7 +953,7 @@ class AstParser {
     }
 
     fun parseInsertStatement(insertStmntContext: RedshiftSqlParser.InsertstmtContext): Ast_InsertStatement {
-        val with: List<Ast_Cte> = insertStmntContext.with_clause()?.let { parseWithClause(it) } ?: emptyList()
+        val with: Ast_WithClause? = insertStmntContext.with_clause()?.let { parseWithClause(it) }
         val into: Ast_InsertTarget = parseInsertTarget(insertStmntContext.insert_target())
         val selectStatement = parseSelectStatement(insertStmntContext.insert_rest().selectstmt())
         return Ast_InsertStatement(
@@ -941,7 +972,7 @@ class AstParser {
     }
 
     fun parseDeleteStatement(deleteStatementContext: RedshiftSqlParser.DeletestmtContext): Ast_DeleteStatement {
-        val with: List<Ast_Cte> = deleteStatementContext.with_clause()?.let { parseWithClause(it) } ?: emptyList()
+        val with: Ast_WithClause? = deleteStatementContext.with_clause()?.let { parseWithClause(it) }
         val from: Ast_SimpleFromTableRef = deleteStatementContext.relation_expr_opt_alias().let {
             val tableFqn = parseQualifiedName(it.relation_expr().qualified_name())
             val alias = it.colid()?.text
@@ -973,6 +1004,16 @@ class AstParser {
                 )
             }
             is RedshiftSqlParser.CreateStmtAsSelectContext -> {
+                val select = parseSelectStatement(rest.selectstmt())
+                Ast_CreateTableAsSelect(
+                    createTableContext,
+                    tableFqn,
+                    ifNotExists,
+                    isTemporary,
+                    select
+                )
+            }
+            is RedshiftSqlParser.CreateStmtAsSelectNoParensContext -> {
                 val select = parseSelectStatement(rest.selectstmt())
                 Ast_CreateTableAsSelect(
                     createTableContext,

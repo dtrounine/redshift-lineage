@@ -8,9 +8,21 @@ sealed class Ast_Node(open val context: ParserRuleContext) {
 
 sealed class Ast_Statement(override val context: ParserRuleContext) : Ast_Node(context)
 
+data class Ast_WithClause(
+    override val context: ParserRuleContext,
+    val ctes: List<Ast_Cte>,
+    val isRecursive: Boolean
+) : Ast_Node(context) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_WithClause(this)
+        ctes.forEach { it.accept(visitor) }
+    }
+}
+
 data class Ast_Cte(
     override val context: ParserRuleContext,
     val name: String,
+    val columnNames: List<String>?,
     val selectStatement: Ast_SelectStatement) : Ast_Node(context) {
 
     override fun accept(visitor: AstVisitor) {
@@ -21,13 +33,13 @@ data class Ast_Cte(
 
 data class Ast_SelectStatement(
     override val context: ParserRuleContext,
-    val with: List<Ast_Cte>,
+    val with: Ast_WithClause?,
     val selectClause: Ast_SelectClause,
     val orderByClause: Ast_Expression?
 ) : Ast_Statement(context) {
     override fun accept(visitor: AstVisitor) {
         visitor.visitAst_SelectStatement(this)
-        with.forEach { it.accept(visitor) }
+        with?.accept(visitor)
         selectClause.accept(visitor)
         orderByClause?.accept(visitor)
     }
@@ -712,13 +724,13 @@ data class Ast_DropStatement(
 
 data class Ast_InsertStatement(
     override val context: ParserRuleContext,
-    val with: List<Ast_Cte>,
+    val with: Ast_WithClause?,
     val into: Ast_InsertTarget,
     val selectStatement: Ast_SelectStatement
 ): Ast_Statement(context) {
     override fun accept(visitor: AstVisitor) {
         visitor.visitAst_InsertStatement(this)
-        with.forEach { it.accept(visitor) }
+        with?.accept(visitor)
         into.accept(visitor)
         selectStatement.accept(visitor)
     }
@@ -737,13 +749,13 @@ data class Ast_InsertTarget(
 
 data class Ast_DeleteStatement(
     override val context: ParserRuleContext,
-    val with: List<Ast_Cte>,
+    val with: Ast_WithClause?,
     val from: Ast_SimpleFromTableRef,
     val where: Ast_Expression?
 ): Ast_Statement(context) {
     override fun accept(visitor: AstVisitor) {
         visitor.visitAst_DeleteStatement(this)
-        with.forEach { it.accept(visitor) }
+        with?.accept(visitor)
         from.accept(visitor)
         where?.accept(visitor)
     }

@@ -206,6 +206,7 @@ createstmt
 createstmt_rest_
     : OPEN_PAREN opttableelementlist? CLOSE_PAREN table_attributes?  # CreateStmtColumns
     | AS OPEN_PAREN selectstmt CLOSE_PAREN                           # CreateStmtAsSelect
+    | AS selectstmt                                                  # CreateStmtAsSelectNoParens
     ;
 
 opttemp
@@ -1025,8 +1026,7 @@ relation_expr
     ;
 
 with_clause
-    : WITH cte_list
-//    : WITH RECURSIVE? cte_list
+    : WITH RECURSIVE? cte_list
     ;
 
 cte_list
@@ -1034,8 +1034,11 @@ cte_list
     ;
 
 common_table_expr
-    : name AS OPEN_PAREN selectstmt CLOSE_PAREN
-//    | name name_list_? AS materialized_? OPEN_PAREN preparablestmt CLOSE_PAREN
+    : name name_list_? AS OPEN_PAREN selectstmt CLOSE_PAREN
+    ;
+
+name_list_
+    : OPEN_PAREN name_list CLOSE_PAREN
     ;
 
 
@@ -1130,11 +1133,10 @@ func_expr_common_subexpr
     | EXTRACT OPEN_PAREN extract_list? CLOSE_PAREN
     | NORMALIZE OPEN_PAREN a_expr (COMMA unicode_normal_form)? CLOSE_PAREN
 //    | OVERLAY OPEN_PAREN (overlay_list | func_arg_list? ) CLOSE_PAREN
-//    | POSITION OPEN_PAREN position_list? CLOSE_PAREN
-    | SUBSTRING OPEN_PAREN (func_arg_list?) CLOSE_PAREN
-//    | SUBSTRING OPEN_PAREN (substr_list | func_arg_list?) CLOSE_PAREN
+    | POSITION OPEN_PAREN position_list? CLOSE_PAREN
+    | SUBSTRING OPEN_PAREN (substr_list | func_arg_list?) CLOSE_PAREN
     | TREAT OPEN_PAREN a_expr AS typename CLOSE_PAREN
-//    | TRIM OPEN_PAREN (BOTH | LEADING | TRAILING)? trim_list CLOSE_PAREN
+    | TRIM OPEN_PAREN (BOTH | LEADING | TRAILING)? trim_list CLOSE_PAREN
     | NULLIF OPEN_PAREN a_expr COMMA a_expr CLOSE_PAREN
     | COALESCE OPEN_PAREN expr_list CLOSE_PAREN
     | GREATEST OPEN_PAREN expr_list CLOSE_PAREN
@@ -1185,7 +1187,44 @@ func_expr_common_subexpr
 //		')'
     ;
 
+trim_list
+    : a_expr FROM expr_list
+    | FROM expr_list
+    | expr_list
+    ;
 
+substr_list
+    : a_expr FROM a_expr FOR a_expr
+    | a_expr FOR a_expr FROM a_expr
+    | a_expr FROM a_expr
+    | a_expr FOR a_expr
+    | a_expr SIMILAR a_expr ESCAPE a_expr
+    ;
+
+position_list
+    : b_expr IN_P b_expr
+    ;
+
+b_expr
+    : c_expr
+//    | b_expr TYPECAST typename
+//    //right	unary plus, unary minus
+//    | (PLUS | MINUS) b_expr
+//    //^	left	exponentiation
+//    | b_expr CARET b_expr
+//    //* / %	left	multiplication, division, modulo
+//    | b_expr (STAR | SLASH | PERCENT) b_expr
+//    //+ -	left	addition, subtraction
+//    | b_expr (PLUS | MINUS) b_expr
+//    //(any other operator)	left	all other native and user-defined operators
+//    | b_expr qual_op b_expr
+//    //< > = <= >= <>	 	comparison operators
+//    | b_expr (LT | GT | EQUAL | LESS_EQUALS | GREATER_EQUALS | NOT_EQUALS) b_expr
+//    | qual_op b_expr
+//    | b_expr qual_op
+//    //S ISNULL NOTNULL	 	IS TRUE, IS FALSE, IS NULL, IS DISTINCT FROM, etc
+//    | b_expr IS NOT? (DISTINCT FROM b_expr | OF OPEN_PAREN type_list CLOSE_PAREN | DOCUMENT_P)
+    ;
 
 
 simpletypename

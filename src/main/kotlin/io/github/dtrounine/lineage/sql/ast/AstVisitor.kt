@@ -55,4 +55,5 @@ interface AstVisitor {
     fun visitAst_ReservedBinaryOperator(op: Ast_ReservedBinaryOperator)
     fun visitAst_QualifiedBinaryOperator(op: Ast_QualifiedBinaryOperator)
     fun visitAst_NestedSelectStatementClause(stmt: Ast_NestedSelectStatementClause)
+    fun visitAst_WithClause(with: Ast_WithClause)
 }

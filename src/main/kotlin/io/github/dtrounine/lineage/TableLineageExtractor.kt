@@ -30,7 +30,7 @@ class TableLineageExtractor {
     }
 
     private fun getSelectLineage(select: Ast_SelectStatement): LineageData {
-        val cteLineage = getCteLineage(select.with)
+        val cteLineage = select.with?.let { getWithClauseLineage(it) } ?: LineageData.newEmpty()
         val selectLineage = getSelectLineage(select.selectClause)
         val resolvedSelectLineage = resolvedTransitiveLineage(
             selectLineage,
@@ -143,7 +143,7 @@ class TableLineageExtractor {
             lineage = mapOf(targetTable to sourcesLineage.sources),
             sources = sourcesLineage.sources
         )
-        val cteLineage = getCteLineage(insert.with)
+        val cteLineage = insert.with?.let { getWithClauseLineage(it) } ?: LineageData.newEmpty()
         val resolvedInsertLineage = resolvedTransitiveLineage(
             rawInsertLineage,
             cteLineage.lineage
@@ -151,9 +151,9 @@ class TableLineageExtractor {
         return resolvedInsertLineage.mergeOnlyLineage(sourcesLineage)
     }
 
-    private fun getCteLineage(cteList: List<Ast_Cte>): LineageData {
+    private fun getWithClauseLineage(with: Ast_WithClause): LineageData {
         var resolvedLineage = LineageData.newEmpty()
-        cteList.forEach {
+        with.ctes.forEach {
             val subLineage = resolvedTransitiveLineage(getLineage(it.selectStatement), resolvedLineage.lineage)
             val cteLineage = LineageData(
                 lineage = mapOf(it.name to subLineage.sources),
@@ -173,7 +173,7 @@ class TableLineageExtractor {
             lineage = mapOf(targetTable to whereSources),
             sources = whereSources
         )
-        val cteLineage = getCteLineage(delete.with)
+        val cteLineage = delete.with?.let { getWithClauseLineage(it) } ?: LineageData.newEmpty()
         val deletedLineage = resolvedTransitiveLineage(deleteLineage, cteLineage.lineage)
         return deletedLineage
     }

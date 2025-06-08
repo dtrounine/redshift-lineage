@@ -6,9 +6,9 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
-import io.github.dtrounine.lineage.model.LineageReport
+import io.github.dtrounine.lineage.model.LineageInfo
+import io.github.dtrounine.lineage.model.SourceContextInfo
 import io.github.dtrounine.lineage.model.SourcePosition
-import io.github.dtrounine.lineage.model.StatementLineageReport
 import io.github.dtrounine.lineage.model.TextPosition
 import io.github.dtrounine.lineage.output.LineageOutputWriter
 import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_JSON
@@ -61,27 +61,20 @@ class RedLinCli: CliktCommand(
         getInputStream(inFile).use { inputStream ->
             getOutputStream(outFile).use { outputStream ->
                 val statements = parseRedshiftSqlToAst(inputStream)
-                val lineageReport: LineageReport = if (splitStatements) {
-                    // Process each statement separately
-                    val statementReports = statements.map { statement ->
-                        val lineageData = TableLineageExtractor().getLineage(statement)
-                        val sourcePosition: SourcePosition? = statement.context.start?.let { start ->
-                            statement.context.stop?.let { stop ->
-                                SourcePosition(
-                                    start = TextPosition(start.line, start.charPositionInLine),
-                                    stop = TextPosition(stop.line, stop.charPositionInLine + (stop.text?.length ?: 0))
-                                )
-                            }
-                        }
-                        StatementLineageReport(lineageData.lineage, lineageData.sources, sourcePosition)
-                    }
-                    LineageReport(statementReports)
+                val lineageInfos: List<LineageInfo> = if (splitStatements) {
+                    statements.map { TableLineageExtractor().getLineage(it) }
                 } else {
-                    // Process all statements at once
-                    val lineageData = TableLineageExtractor().getLineage(statements)
-                    LineageReport.fromLineageData(lineageData)
+                    listOf(TableLineageExtractor().getAggregatedLineage(statements))
                 }
-                LineageOutputWriter(outFormat).write(lineageReport, outputStream)
+                val lineageInfoWithContext = lineageInfos.map { lineageInfo ->
+                    lineageInfo.withContext(
+                        SourceContextInfo(
+                            sourceName = inFile?.path,
+                            positionInSource = lineageInfo.context?.positionInSource
+                        )
+                    )
+                }
+                LineageOutputWriter(outFormat).write(lineageInfoWithContext, outputStream)
             }
         }
     }

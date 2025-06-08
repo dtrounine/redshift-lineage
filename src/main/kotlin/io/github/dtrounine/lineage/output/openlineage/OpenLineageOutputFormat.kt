@@ -1,9 +1,8 @@
 package io.github.dtrounine.lineage.output.openlineage
 
-import io.github.dtrounine.lineage.model.LineageData
-import io.github.dtrounine.lineage.model.LineageReport
-import io.github.dtrounine.lineage.model.StatementLineageReport
 import io.github.dtrounine.lineage.output.OutputFormat
+import io.github.dtrounine.lineage.output.model.LineageReport
+import io.github.dtrounine.lineage.output.model.LineageReportEntry
 import io.openlineage.client.OpenLineage
 import io.openlineage.client.OpenLineage.RunEvent
 import io.openlineage.client.OpenLineageClient
@@ -26,17 +25,17 @@ class OpenLineageOutputFormat: OutputFormat("openlineage") {
         }
     }
 
-    private fun getEventsForStatement(ol: OpenLineage, statement: StatementLineageReport): List<RunEvent> =
-        statement.lineage.entries.map { (sink, sources) ->
-            val olSources = sources.map { input ->
+    private fun getEventsForStatement(ol: OpenLineage, statement: LineageReportEntry): List<RunEvent> =
+        statement.lineage.map { sink ->
+            val olSources = sink.sources.map { input ->
                 ol.newInputDatasetBuilder()
                     .namespace("redshift://cluster.region:5439")
-                    .name(input)
+                    .name(input.name)
                     .build()
             }.toList()
             val olOutput = ol.newOutputDatasetBuilder()
                 .namespace("redshift://cluster.region:5439")
-                .name(sink)
+                .name(sink.target.name)
                 .build()
             val event = ol.newRunEventBuilder()
                 .eventTime(ZonedDateTime.now())

@@ -1,8 +1,7 @@
 package io.github.dtrounine.lineage.output.simple_json
 
-import io.github.dtrounine.lineage.model.LineageData
-import io.github.dtrounine.lineage.model.LineageReport
 import io.github.dtrounine.lineage.output.OutputFormat
+import io.github.dtrounine.lineage.output.model.LineageReport
 import io.github.dtrounine.lineage.output.prettyJson
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.encodeToStream
@@ -17,8 +16,7 @@ class SimpleJsonOutputFormat: OutputFormat("json") {
      */
     @OptIn(ExperimentalSerializationApi::class)
     override fun write(lineageReport: LineageReport, output: OutputStream) {
-        val lineageOutput = LineageInfo.fromLineageData(lineageReport)
-        prettyJson.encodeToStream(lineageOutput, output)
+        prettyJson.encodeToStream(lineageReport, output)
         output.flush()
     }
 }

@@ -11,7 +11,7 @@ const val OUTPUT_FORMAT_YAML = "yaml"
 object OutputFormatFactory {
 
     fun getAvailableFormats(): List<String> {
-        return listOf(OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_OPENLINEAGE)
+        return listOf(OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_YAML, OUTPUT_FORMAT_OPENLINEAGE)
     }
     fun createOutputFormat(name: String): OutputFormat {
         return when (name.lowercase()) {

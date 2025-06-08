@@ -1,6 +1,9 @@
 package io.github.dtrounine.lineage.util
 
-import io.github.dtrounine.lineage.model.LineageData
+import io.github.dtrounine.lineage.model.LineageInfo
+import io.github.dtrounine.lineage.model.SourcePosition
+import io.github.dtrounine.lineage.model.TextPosition
+import io.github.dtrounine.lineage.sql.ast.Ast_Node
 
 fun mergeLineage(left: Map<String, Set<String>>, right: Map<String, Set<String>>): Map<String, Set<String>> {
     val merged: MutableMap<String, Set<String>> = mutableMapOf()
@@ -17,23 +20,25 @@ fun mergeLineage(left: Map<String, Set<String>>, right: Map<String, Set<String>>
 }
 
 /**
- * Merges two [LineageData] instances by combining their lineage maps and their lists of sources.
+ * Merges two [LineageInfo] instances by combining their lineage maps and their lists of sources.
  */
-fun LineageData.mergeAll(other: LineageData): LineageData = LineageData(
+fun LineageInfo.mergeAll(other: LineageInfo): LineageInfo = LineageInfo(
     lineage = mergeLineage(this.lineage, other.lineage),
-    sources = this.sources union other.sources
+    sources = this.sources union other.sources,
+    context = this.context
 )
 
 /**
- * Merges two [LineageData] instances by combining their lineage maps,
+ * Merges two [LineageInfo] instances by combining their lineage maps,
  * but does not merge the sources.
  */
-fun LineageData.mergeOnlyLineage(other: LineageData): LineageData = LineageData(
+fun LineageInfo.mergeOnlyLineage(other: LineageInfo): LineageInfo = LineageInfo(
     lineage = mergeLineage(this.lineage, other.lineage),
-    sources = this.sources // Sources are not merged
+    sources = this.sources, // Sources are not merged,
+    context = this.context
 )
 
-fun LineageData.println() {
+fun LineageInfo.println() {
     println("LineageInfo:")
     println("  lineage:")
     for ((key, value) in lineage) {
@@ -43,4 +48,32 @@ fun LineageData.println() {
     for (source in sources) {
         println("    - $source")
     }
+}
+
+fun sourcePositionFromAst(ast: Ast_Node): SourcePosition? {
+    val sourcePosition: SourcePosition? = ast.context.start?.let { start ->
+        ast.context.stop?.let { stop ->
+            SourcePosition(
+                start = TextPosition(start.line, start.charPositionInLine),
+                stop = TextPosition(stop.line, stop.charPositionInLine + (stop.text?.length ?: 0))
+            )
+        }
+    }
+    return sourcePosition
+}
+
+fun mergeSourcePositions(
+    left: SourcePosition?,
+    right: SourcePosition?
+): SourcePosition? {
+    if (left == null) return right
+    if (right == null) return left
+
+    val start = minOf(left.start, right.start)
+    val stop = maxOf(left.stop, right.stop)
+
+    return SourcePosition(
+        start = start,
+        stop = stop
+    )
 }

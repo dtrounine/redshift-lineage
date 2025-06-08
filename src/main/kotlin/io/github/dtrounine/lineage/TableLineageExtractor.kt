@@ -1,9 +1,14 @@
 package io.github.dtrounine.lineage
 
-import io.github.dtrounine.lineage.model.LineageData
+import io.github.dtrounine.lineage.model.LineageInfo
+import io.github.dtrounine.lineage.model.SourceContextInfo
+import io.github.dtrounine.lineage.model.SourcePosition
+import io.github.dtrounine.lineage.model.TextPosition
 import io.github.dtrounine.lineage.sql.ast.*
 import io.github.dtrounine.lineage.util.mergeAll
 import io.github.dtrounine.lineage.util.mergeOnlyLineage
+import io.github.dtrounine.lineage.util.mergeSourcePositions
+import io.github.dtrounine.lineage.util.sourcePositionFromAst
 
 /**
  * Extracts lineage information from parsed SQL statements,
@@ -11,26 +16,69 @@ import io.github.dtrounine.lineage.util.mergeOnlyLineage
  */
 class TableLineageExtractor {
 
-    fun getLineage(statements: List<Ast_Statement>): LineageData {
+    /**
+     * Get aggregated lineage information from a list of SQL statements. All inputs and outputs
+     * from all statements are merged into a single lineage report, so that all details about
+     * individual inputs and outputs lineage from separate statements are lost.
+     *
+     * So, for example, if you have two statements:
+     *
+     * ```sql
+     * INSERT INTO departures SELECT ... FROM schedule;
+     * SELECT ... INTO delayed_trains FROM departures JOIN delay_status ON ... ;
+     * ```
+     *
+     * you will get a lineage report that contains:
+     *
+     * ```
+     * inputs:
+     *  - schedule
+     *  - delay_status
+     * outputs:
+     *  - delayed_trains
+     *  - departures
+     * ```
+     *
+     * Note: If you need lineage information for each statement separately,
+     * consider using [getLineage(statement: Ast_Statement)] method.
+     */
+    fun getAggregatedLineage(statements: List<Ast_Statement>): LineageInfo {
         if (statements.isEmpty()) {
-            return LineageData.newEmpty()
+            return LineageInfo.newEmpty()
         }
-        return statements.map { getLineage(it) }
+        val mergedLineage = statements.map { getLineage(it) }
             .reduce { acc, lineageInfo -> acc.mergeAll(lineageInfo) }
+        val sourcePosition: SourcePosition? = statements.map { sourcePositionFromAst(it) }
+            .reduce() { acc, position ->  mergeSourcePositions(acc, position) }
+        return mergedLineage.withContext(
+            SourceContextInfo(
+                sourceName = null,
+                positionInSource = sourcePosition
+            )
+        )
     }
 
-    fun getLineage(statement: Ast_Statement): LineageData {
-        return when (statement) {
+    fun getLineage(statement: Ast_Statement): LineageInfo {
+        val lineage = when (statement) {
             is Ast_SelectStatement -> getSelectLineage(statement)
             is Ast_InsertStatement -> getInsertLineage(statement)
             is Ast_DeleteStatement -> getDeleteLineage(statement)
             is Ast_CreateTableAsSelect -> getCreateAsSelectLineage(statement)
-            else -> LineageData.newEmpty()
+            else -> LineageInfo.newEmpty()
         }
+        val sourcePosition: SourcePosition? = sourcePositionFromAst(statement)
+        return sourcePosition?.let {
+            lineage.withContext(
+                SourceContextInfo(
+                    sourceName = null,
+                    positionInSource = it
+                )
+            )
+        } ?: lineage
     }
 
-    private fun getSelectLineage(select: Ast_SelectStatement): LineageData {
-        val cteLineage = select.with?.let { getWithClauseLineage(it) } ?: LineageData.newEmpty()
+    private fun getSelectLineage(select: Ast_SelectStatement): LineageInfo {
+        val cteLineage = select.with?.let { getWithClauseLineage(it) } ?: LineageInfo.newEmpty()
         val selectLineage = getSelectLineage(select.selectClause)
         val resolvedSelectLineage = resolvedTransitiveLineage(
             selectLineage,
@@ -39,7 +87,7 @@ class TableLineageExtractor {
         return resolvedSelectLineage
     }
 
-    private fun getSelectLineage(select: Ast_SelectClause): LineageData {
+    private fun getSelectLineage(select: Ast_SelectClause): LineageInfo {
         return when (select) {
             is Ast_CombineSelectClause -> {
                 val left = getSelectLineage(select.left)
@@ -48,13 +96,13 @@ class TableLineageExtractor {
                 left.mergeAll(right)
             }
             is Ast_CoreSelectClause ->  getSimpleSelectLineage(select)
-            is Ast_ValuesSelectClause -> LineageData.newEmpty() // Values clause does not have lineage
+            is Ast_ValuesSelectClause -> LineageInfo.newEmpty() // Values clause does not have lineage
             is Ast_NestedSelectStatementClause -> getSelectLineage(select.selectStatement)
         }
     }
 
-    private fun getSimpleSelectLineage(select: Ast_CoreSelectClause): LineageData {
-        val fromLineage = select.from?.let { getLineage(it) } ?: LineageData.newEmpty()
+    private fun getSimpleSelectLineage(select: Ast_CoreSelectClause): LineageInfo {
+        val fromLineage = select.from?.let { getLineage(it) } ?: LineageInfo.newEmpty()
         val allTargetSources: MutableSet<String> = mutableSetOf()
         select.targets.forEach { target ->
             when (target) {
@@ -75,13 +123,13 @@ class TableLineageExtractor {
         var result = fromLineage
 
         if (allTargetSources.isNotEmpty()) {
-            result = result.mergeAll(LineageData(
+            result = result.mergeAll(LineageInfo(
                 lineage = emptyMap(),
                 sources = allTargetSources
             ))
         }
         if (additionalClauseSource.isNotEmpty()) {
-            result = result.mergeAll(LineageData(
+            result = result.mergeAll(LineageInfo(
                 lineage = emptyMap(),
                 sources = additionalClauseSource
             ))
@@ -89,7 +137,7 @@ class TableLineageExtractor {
 
         select.into?.let {
             val targetTable = it.tableFqn
-            val intoLineage = LineageData(
+            val intoLineage = LineageInfo(
                 lineage = mapOf(targetTable to result.sources),
                 sources = emptySet()
             )
@@ -99,8 +147,8 @@ class TableLineageExtractor {
         return result
     }
 
-    private fun getLineage(from: Ast_From): LineageData {
-        var out = LineageData.newEmpty()
+    private fun getLineage(from: Ast_From): LineageInfo {
+        var out = LineageInfo.newEmpty()
         for (fromElement in from.elements) {
             val lineage = getLineage(fromElement)
             out = out.mergeAll(lineage)
@@ -108,7 +156,7 @@ class TableLineageExtractor {
         return out
     }
 
-    fun getLineage(fromElement: Ast_FromElement): LineageData {
+    fun getLineage(fromElement: Ast_FromElement): LineageInfo {
         var lineage = getLineage(fromElement.src)
         fromElement.joins.forEach { join ->
             val joinLineage = getLineage(join)
@@ -117,15 +165,15 @@ class TableLineageExtractor {
         return lineage
     }
 
-    private fun getLineage(join: Ast_Join): LineageData {
+    private fun getLineage(join: Ast_Join): LineageInfo {
         return getLineage(join.joinTo)
     }
 
-    private fun getLineage(simpleFrom: Ast_SimpleFromElement): LineageData {
+    private fun getLineage(simpleFrom: Ast_SimpleFromElement): LineageInfo {
         when (simpleFrom) {
             is Ast_SimpleFromTableRef -> {
                 val table = simpleFrom.tableFqn
-                return LineageData(emptyMap(), setOf(table))
+                return LineageInfo(emptyMap(), setOf(table))
             }
             is Ast_SimpleFromSubQuery -> {
                 return getLineage(simpleFrom.subQuery)
@@ -136,14 +184,14 @@ class TableLineageExtractor {
         }
     }
 
-    private fun getInsertLineage(insert: Ast_InsertStatement): LineageData {
+    private fun getInsertLineage(insert: Ast_InsertStatement): LineageInfo {
         val targetTable = insert.into.targetFqn
         val sourcesLineage = getSelectLineage(insert.selectStatement)
-        val rawInsertLineage = LineageData(
+        val rawInsertLineage = LineageInfo(
             lineage = mapOf(targetTable to sourcesLineage.sources),
             sources = sourcesLineage.sources
         )
-        val cteLineage = insert.with?.let { getWithClauseLineage(it) } ?: LineageData.newEmpty()
+        val cteLineage = insert.with?.let { getWithClauseLineage(it) } ?: LineageInfo.newEmpty()
         val resolvedInsertLineage = resolvedTransitiveLineage(
             rawInsertLineage,
             cteLineage.lineage
@@ -151,11 +199,11 @@ class TableLineageExtractor {
         return resolvedInsertLineage.mergeOnlyLineage(sourcesLineage)
     }
 
-    private fun getWithClauseLineage(with: Ast_WithClause): LineageData {
-        var resolvedLineage = LineageData.newEmpty()
+    private fun getWithClauseLineage(with: Ast_WithClause): LineageInfo {
+        var resolvedLineage = LineageInfo.newEmpty()
         with.ctes.forEach {
             val subLineage = resolvedTransitiveLineage(getLineage(it.selectStatement), resolvedLineage.lineage)
-            val cteLineage = LineageData(
+            val cteLineage = LineageInfo(
                 lineage = mapOf(it.name to subLineage.sources),
                 sources = subLineage.sources
             )
@@ -164,24 +212,24 @@ class TableLineageExtractor {
         return resolvedLineage
     }
 
-    private fun getDeleteLineage(delete: Ast_DeleteStatement): LineageData {
+    private fun getDeleteLineage(delete: Ast_DeleteStatement): LineageInfo {
         val targetTable = delete.from.tableFqn
         val whereSources = delete.where?.let { where ->
             getExpressionSources(where)
         } ?: emptySet()
-        val deleteLineage = LineageData(
+        val deleteLineage = LineageInfo(
             lineage = mapOf(targetTable to whereSources),
             sources = whereSources
         )
-        val cteLineage = delete.with?.let { getWithClauseLineage(it) } ?: LineageData.newEmpty()
+        val cteLineage = delete.with?.let { getWithClauseLineage(it) } ?: LineageInfo.newEmpty()
         val deletedLineage = resolvedTransitiveLineage(deleteLineage, cteLineage.lineage)
         return deletedLineage
     }
 
-    private fun getCreateAsSelectLineage(create: Ast_CreateTableAsSelect): LineageData {
+    private fun getCreateAsSelectLineage(create: Ast_CreateTableAsSelect): LineageInfo {
         val targetTable = create.tableName
         val sourcesLineage = getSelectLineage(create.selectStatement)
-        val createLineage = LineageData(
+        val createLineage = LineageInfo(
             lineage = mapOf(targetTable to sourcesLineage.sources),
             sources = sourcesLineage.sources
         )
@@ -215,14 +263,14 @@ class TableLineageExtractor {
     }
 
     private fun resolvedTransitiveLineage(
-        srcLineage: LineageData,
+        srcLineage: LineageInfo,
         previouslyResolvedLineage: Map<String, Set<String>>
-    ): LineageData {
+    ): LineageInfo {
         val resolvedLineage = srcLineage.lineage.mapValues { (sink, sources) ->
             resolvedTransitiveSources(sources, previouslyResolvedLineage)
         }
         val resolvedSources = resolvedTransitiveSources(srcLineage.sources, previouslyResolvedLineage)
-        return LineageData(
+        return LineageInfo(
             lineage = resolvedLineage,
             sources = resolvedSources
         )

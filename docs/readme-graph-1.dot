@@ -1,0 +1,4 @@
+digraph {
+    departures -> delayed_departures
+    delay_status -> delayed_departures
+}

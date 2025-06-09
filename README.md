@@ -52,7 +52,7 @@ page, and extract it to a directory of your choice.
 
 ```bash
 # Download and unzip the latest release
-REDSHIFT_LINEAGE_VERSION="0.3.2"
+REDSHIFT_LINEAGE_VERSION="0.3.3"
 curl -L https://github.com/dtrounine/redshift-lineage/releases/download/${REDSHIFT_LINEAGE_VERSION}/redshift-lineage-${REDSHIFT_LINEAGE_VERSION}.zip
 unzip redshift-lineage-${REDSHIFT_LINEAGE_VERSION}.zip
 mv redshift-lineage-${REDSHIFT_LINEAGE_VERSION} redshift-lineage

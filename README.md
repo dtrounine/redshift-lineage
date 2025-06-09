@@ -155,3 +155,13 @@ and include:
 - Any relevant logs or command-line output
 
 We appreciate your help in making this project better!
+
+# License
+
+This project is licensed under the MIT License with an additional restriction as defined by the Commons Clause v1.0.
+
+You are free to use, copy, modify, and distribute this software for personal, academic, or internal business use,
+including in commercial contexts, as long as you product or service does not:
+
+- Provide any data lineage functionality, or
+- Perform any form of SQL code analysis

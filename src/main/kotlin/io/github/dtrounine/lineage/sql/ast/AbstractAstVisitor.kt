@@ -206,4 +206,7 @@ abstract class AbstractAstVisitor: AstVisitor {
 
     override fun visitAst_WithClause(with: Ast_WithClause) {
     }
+
+    override fun visitAst_AlterTableRenameStatement(stmt: Ast_AlterRenameTableStatement) {
+    }
 }

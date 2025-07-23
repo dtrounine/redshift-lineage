@@ -104,6 +104,7 @@ class TableLineageExtractor {
             is Ast_InsertStatement -> getInsertLineage(statement)
             is Ast_DeleteStatement -> getDeleteLineage(statement)
             is Ast_CreateTableAsSelect -> getCreateAsSelectLineage(statement)
+            is Ast_AlterRenameTableStatement -> getAlterRenameTableLineage(statement)
             else -> LineageInfo.newEmpty()
         }
         val sourcePosition: SourcePosition? = sourcePositionFromAst(statement)
@@ -313,6 +314,24 @@ class TableLineageExtractor {
         return LineageInfo(
             lineage = resolvedLineage,
             sources = resolvedSources
+        )
+    }
+
+    private fun getAlterRenameTableLineage(
+        alter: Ast_AlterRenameTableStatement
+    ): LineageInfo {
+        val oldTable = alter.fromTableFqn
+        val newTableName = alter.toTableName
+        // Remove the last part (after the last dot) of the oldTableFqn and append the new table name to get the
+        // new table fqn
+        val newTable = if (oldTable.contains('.')) {
+            oldTable.substringBeforeLast('.') + '.' + newTableName
+        } else {
+            newTableName
+        }
+        return LineageInfo(
+            lineage = mapOf(newTable to setOf(oldTable)),
+            sources = setOf(oldTable)
         )
     }
 }

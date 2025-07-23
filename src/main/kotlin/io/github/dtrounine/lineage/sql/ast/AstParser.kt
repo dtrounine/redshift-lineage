@@ -63,6 +63,7 @@ class AstParser {
             is RedshiftSqlParser.InsertStatementContext -> return parseInsertStatement(stmtContext.insertstmt())
             is RedshiftSqlParser.DeleteStatementContext -> return parseDeleteStatement(stmtContext.deletestmt())
             is RedshiftSqlParser.CreateStatementContext -> return parseCreateStatement(stmtContext.createstmt())
+            is RedshiftSqlParser.AlterRenameTableStatementContext -> return parseAlterRenameTableStatement(stmtContext.alterrenametablestmt())
             // Add other statement types here
             else -> {
 //                println("Unsupported statement type: ${stmtContext.javaClass.simpleName}")
@@ -1106,5 +1107,17 @@ class AstParser {
             return it.text
         }
         throw IllegalArgumentException("Unknown identifier type: ${identifierContext.text}")
+    }
+
+    private fun parseAlterRenameTableStatement(
+        alterRenameTableContext: RedshiftSqlParser.AlterrenametablestmtContext
+    ): Ast_AlterRenameTableStatement {
+        val tableFqn = parseQualifiedName(alterRenameTableContext.qualified_name())
+        val newName = alterRenameTableContext.colid().text
+        return Ast_AlterRenameTableStatement(
+            alterRenameTableContext,
+            tableFqn,
+            newName
+        )
     }
 }

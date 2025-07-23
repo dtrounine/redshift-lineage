@@ -47,6 +47,7 @@ stmt
     | selectstmt        # SelectStatement
     | grantstmt         # GrantStatement
     | alterownerstmt    # AlterOwnerStatement
+    | alterrenametablestmt # AlterRenameTableStatement
     | dropstmt          # DropStatement
     | insertstmt        # InsertStatement
     | deletestmt        # DeleteStatement
@@ -163,6 +164,9 @@ alterownerstmt
     : ALTER TABLE qualified_name OWNER TO rolespec
     ;
 
+alterrenametablestmt
+    : ALTER TABLE qualified_name RENAME TO colid
+    ;
 
 dropstmt
     : DROP TABLE ( IF_P EXISTS )? any_name_list_ drop_behavior_?

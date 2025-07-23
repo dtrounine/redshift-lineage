@@ -843,3 +843,13 @@ data class Ast_ColumnDefinition(
         visitor.visitAst_ColumnDefinition(this)
     }
 }
+
+data class Ast_AlterRenameTableStatement(
+    override val context: ParserRuleContext,
+    val fromTableFqn: String,
+    val toTableName: String
+): Ast_Statement(context) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_AlterTableRenameStatement(this)
+    }
+}

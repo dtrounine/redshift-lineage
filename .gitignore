@@ -47,3 +47,10 @@ src/main/gen
 src/main/antlr/**/gen
 src/main/antlr/**/*.tokens
 *.sql
+
+### Temporary files and directories
+tmp/
+*.tar.gz
+*.patch
+run-sql-tests.sh
+sql/

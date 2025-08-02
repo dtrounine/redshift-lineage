@@ -22,6 +22,9 @@ repositories {
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testImplementation(kotlin("test"))
 
     implementation("com.strumenta:antlr-kotlin-runtime:$antlrKotlinVersion")
@@ -48,6 +51,9 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
 }
 kotlin {
     jvmToolchain(17)

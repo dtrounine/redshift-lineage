@@ -850,8 +850,20 @@ class AstParser {
     }
 
     private fun parseImplicitRowExpression(implicitRowContext: RedshiftSqlParser.C_expr_implicit_rowContext): Ast_Expression {
-        // TODO
-        throw UnsupportedOperationException("Implicit row expressions are not supported yet: ${implicitRowContext.text}")
+        val implicitRow = implicitRowContext.implicit_row()
+        val expressions = mutableListOf<Ast_Expression>()
+        
+        // Parse expressions from expr_list
+        implicitRow.expr_list().a_expr().forEach { exprContext ->
+            expressions.add(parseExpression(exprContext))
+        }
+        
+        // Parse the additional expression after COMMA (if any)
+        implicitRow.a_expr()?.let { exprContext ->
+            expressions.add(parseExpression(exprContext))
+        }
+        
+        return Ast_ImplicitRowExpression(implicitRowContext, expressions)
     }
 
     private fun parseSelectInParenthesesWithIndirection(selectIndirectionContext: RedshiftSqlParser.C_expr_selectContext): Ast_Expression {

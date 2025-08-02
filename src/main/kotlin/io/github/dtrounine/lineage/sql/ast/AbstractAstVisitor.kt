@@ -150,6 +150,9 @@ abstract class AbstractAstVisitor: AstVisitor {
     override fun visitAst_ConstantExpression(expr: Ast_ConstantExpression) {
     }
 
+    override fun visitAst_ImplicitRowExpression(expr: Ast_ImplicitRowExpression) {
+    }
+
     override fun visitAst_CaseExpression(expr: Ast_CaseExpression) {
     }
 

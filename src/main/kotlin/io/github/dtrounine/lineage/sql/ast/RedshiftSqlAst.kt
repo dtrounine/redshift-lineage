@@ -621,6 +621,16 @@ class Ast_ConstantExpression(
     }
 }
 
+class Ast_ImplicitRowExpression(
+    override val context: ParserRuleContext,
+    val expressions: List<Ast_Expression>
+): Ast_Expression(context) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_ImplicitRowExpression(this)
+        expressions.forEach { it.accept(visitor) }
+    }
+}
+
 /*
 class Ast_IntegerConstant(
     override val context: ParserRuleContext,

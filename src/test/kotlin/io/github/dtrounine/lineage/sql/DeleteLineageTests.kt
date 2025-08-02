@@ -71,4 +71,19 @@ class DeleteLineageTests {
                 - churned_users
         """
     )
+
+    @Test
+    fun testDeleteLineage_implicitRowExpression() = assertLineage(
+        """
+            DELETE FROM herring
+            WHERE (foo,bar) IN (SELECT foo,bar FROM lobster);
+        """,
+        """
+            lineage:
+                herring:
+                    - lobster
+            sources:
+                - lobster
+        """
+    )
 }

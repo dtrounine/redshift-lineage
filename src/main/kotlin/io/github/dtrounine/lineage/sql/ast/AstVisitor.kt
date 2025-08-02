@@ -77,6 +77,7 @@ interface AstVisitor {
     fun visitAst_SelectExpression(expr: Ast_SelectExpression)
     fun visitAst_ColumnReference(expr: Ast_ColumnReference)
     fun visitAst_ConstantExpression(expr: Ast_ConstantExpression)
+    fun visitAst_ImplicitRowExpression(expr: Ast_ImplicitRowExpression)
     fun visitAst_CaseExpression(expr: Ast_CaseExpression)
     fun visitAst_WhenClause(clause: Ast_WhenClause)
     fun visitAst_FunctionCallExpression(expr: Ast_FunctionCallExpression)

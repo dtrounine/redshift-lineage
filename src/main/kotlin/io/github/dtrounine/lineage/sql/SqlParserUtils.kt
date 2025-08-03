@@ -76,9 +76,16 @@ fun parseRedshiftSqlToAst(sql: String): List<Ast_Statement> {
 }
 
 private fun parseRedshiftSqlToAst(charStream: CharStream): List<Ast_Statement> {
+    val errorListener = ThrowingErrorListener()
+    
     val lexer = RedshiftSqlLexer(charStream)
+    lexer.removeErrorListeners()
+    lexer.addErrorListener(errorListener)
+    
     val tokens = CommonTokenStream(lexer)
     val parser = RedshiftSqlParser(tokens)
+    parser.removeErrorListeners()
+    parser.addErrorListener(errorListener)
     parser.buildParseTree = true
 
     val root: RedshiftSqlParser.RootContext = parser.root()

@@ -41,6 +41,7 @@
 package io.github.dtrounine.lineage
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Abort
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
@@ -56,6 +57,7 @@ import io.github.dtrounine.lineage.output.LineageOutputWriter
 import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_JSON
 import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_OPENLINEAGE
 import io.github.dtrounine.lineage.output.OUTPUT_FORMAT_YAML
+import io.github.dtrounine.lineage.sql.SqlParsingException
 import io.github.dtrounine.lineage.sql.parseRedshiftSqlToAst
 import java.io.File
 import java.io.InputStream
@@ -104,24 +106,29 @@ class RedLinCli: CliktCommand(
         .flag(default = false)
 
     override fun run() {
-        getInputStream(inFile).use { inputStream ->
-            getOutputStream(outFile).use { outputStream ->
-                val statements = parseRedshiftSqlToAst(inputStream)
-                val lineageInfos: List<LineageInfo> = if (splitStatements) {
-                    statements.map { TableLineageExtractor().getLineage(it) }
-                } else {
-                    listOf(TableLineageExtractor().getAggregatedLineage(statements))
-                }
-                val lineageInfoWithContext = lineageInfos.map { lineageInfo ->
-                    lineageInfo.withContext(
-                        SourceContextInfo(
-                            sourceName = inFile?.path,
-                            positionInSource = lineageInfo.context?.positionInSource
+        try {
+            getInputStream(inFile).use { inputStream ->
+                getOutputStream(outFile).use { outputStream ->
+                    val statements = parseRedshiftSqlToAst(inputStream)
+                    val lineageInfos: List<LineageInfo> = if (splitStatements) {
+                        statements.map { TableLineageExtractor().getLineage(it) }
+                    } else {
+                        listOf(TableLineageExtractor().getAggregatedLineage(statements))
+                    }
+                    val lineageInfoWithContext = lineageInfos.map { lineageInfo ->
+                        lineageInfo.withContext(
+                            SourceContextInfo(
+                                sourceName = inFile?.path,
+                                positionInSource = lineageInfo.context?.positionInSource
+                            )
                         )
-                    )
+                    }
+                    LineageOutputWriter(outFormat).write(lineageInfoWithContext, outputStream)
                 }
-                LineageOutputWriter(outFormat).write(lineageInfoWithContext, outputStream)
             }
+        } catch (e: SqlParsingException) {
+            System.err.println(e.message)
+            throw Abort()
         }
     }
 }

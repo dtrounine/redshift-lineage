@@ -1011,6 +1011,8 @@ join_clause
 
 join_type
     : (FULL | LEFT | RIGHT | INNER_P) OUTER_P?
+    | LEFTOUTER
+    | FULLOUTER
     ;
 
 join_qual
@@ -1895,12 +1897,14 @@ type_func_name_keyword
     | CURRENT_SCHEMA
     | FREEZE
     | FULL
+    | FULLOUTER
     | ILIKE
     | INNER_P
     | IS
     | ISNULL
     | JOIN
     | LEFT
+    | LEFTOUTER
     | LIKE
     | NATURAL
     | NOTNULL
@@ -2159,6 +2163,7 @@ bare_label_keyword
     | FORWARD
     | FREEZE
     | FULL
+    | FULLOUTER
     | FUNCTION
     | FUNCTIONS
     | GENERATED
@@ -2224,6 +2229,7 @@ bare_label_keyword
     | LEAKPROOF
     | LEAST
     | LEFT
+    | LEFTOUTER
     | LEVEL
     | LIKE
     | LISTEN

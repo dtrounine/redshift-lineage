@@ -35,16 +35,6 @@ dependencies {
     implementation("com.charleskorn.kaml:kaml:0.59.0")
 }
 
-sourceSets {
-    main {
-        kotlin {
-            // telling that output generateGrammarSource should be part of main source set
-            // actual passed value will be equal to `outputDirectory` that we configured above
-            srcDir(layout.buildDirectory.dir("generatedAntlr").get().asFile)
-        }
-    }
-}
-
 application {
     mainClass = "io.github.dtrounine.lineage.MainKt"
 }
@@ -82,8 +72,34 @@ githubRelease {
     dryRun.set(false) // by default false; you can use this to see what actions would be taken without making a release
 }
 
+val generateVersionConstant = tasks.register("generateVersionConstant") {
+    val outputDir = layout.buildDirectory.dir("generated/kotlin")
+    outputs.dir(outputDir)
+    
+    doLast {
+        val versionFile = outputDir.get().asFile.resolve("io/github/dtrounine/lineage/Version.kt")
+        versionFile.parentFile.mkdirs()
+        versionFile.writeText("""
+            package io.github.dtrounine.lineage
+            
+            const val VERSION = "${project.version}"
+        """.trimIndent())
+    }
+}
+
+sourceSets {
+    main {
+        kotlin {
+            // telling that output generateGrammarSource should be part of main source set
+            // actual passed value will be equal to `outputDirectory` that we configured above
+            srcDir(layout.buildDirectory.dir("generatedAntlr").get().asFile)
+            srcDir(layout.buildDirectory.dir("generated/kotlin"))
+        }
+    }
+}
+
 tasks.named("compileKotlin") {
-    dependsOn(generateKotlinGrammarSource)
+    dependsOn(generateKotlinGrammarSource, generateVersionConstant)
 }
 
 tasks.named("githubRelease") {

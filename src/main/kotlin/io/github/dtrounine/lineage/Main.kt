@@ -41,10 +41,12 @@
 package io.github.dtrounine.lineage
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.choice
 import io.github.dtrounine.lineage.model.LineageInfo
 import io.github.dtrounine.lineage.model.SourceContextInfo
@@ -64,6 +66,10 @@ class RedLinCli: CliktCommand(
     name = "redshift-lineage",
     help = "Redshift SQL lineage extractor",
     printHelpOnEmptyArgs = false) {
+
+    init {
+        versionOption(VERSION) { VERSION }
+    }
 
     private val outFile: File? by
         option(

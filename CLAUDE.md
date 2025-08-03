@@ -49,6 +49,8 @@ This is a CLI tool that extracts table-level lineage information from Redshift S
 
 ## Testing
 
+### Unit Tests
+
 Tests are located in `src/test/kotlin/` and use Kotlin test framework. Test files include:
 - `SelectLineageTests.kt` - Core SELECT statement lineage tests
 - `InsertLineageTests.kt` - INSERT statement tests
@@ -59,6 +61,12 @@ Tests are located in `src/test/kotlin/` and use Kotlin test framework. Test file
 Run tests with: 
 - `./gradlew test` - to execute all tests.
 - `./gradlew test` - tests "io.github.dtrounine.lineage.sql.SelectLineageTests" -- to run specific test classes.
+
+### Real-World Scenario Tests
+
+To run the tool against real-world SQL files located in a directory, use the following command:
+- Build and install the tool first: `./gradlew install`
+- `./script/test_standalone.sh <path_to_sql_files_dir> <path_to_report_dir>`
 
 ## Grammar and Code Generation
 

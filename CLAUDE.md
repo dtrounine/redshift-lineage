@@ -8,12 +8,17 @@ This is a CLI tool that extracts table-level lineage information from Redshift S
 
 ## Build System & Development Commands
 
-**Build and Run:**
+**Build:**
 - `./gradlew build` - Build the project
-- `./gradlew run` - Run the application 
-- `./gradlew run --args="--help"` - Show CLI help
 - `./gradlew test` - Run tests
 - `./gradlew check` - Run all verification tasks
+- `./gradlew install` - Install the built binary to the build/install directory
+
+**Run:**
+Note: when developing, it's recommended to run `./gradlew install` first before running the tool.
+- `./build/install/redshift-lineage/bin/redshift-lineage --help` - Display help information
+- `./build/install/redshift-lineage/bin/redshift-lineage --in-file <path_to_sql_file>` - Run the tool on a specific SQL file
+- `echo "SELECT * FROM table1;" | ./build/install/redshift-lineage/bin/redshift-lineage` - Run the tool with SQL input from stdin
 
 **Distribution:**
 - `./gradlew distZip` - Create distributable ZIP archive

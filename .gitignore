@@ -54,3 +54,9 @@ tmp/
 *.patch
 run-sql-tests.sh
 sql/
+test_data/
+test_data.zip
+
+### Local env config
+.envrc
+

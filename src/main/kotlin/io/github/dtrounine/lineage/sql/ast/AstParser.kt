@@ -957,15 +957,18 @@ class AstParser {
     }
 
     fun parseJoinType(joinTypeContext: RedshiftSqlParser.Join_typeContext): Ast_QualifiedJoinOperator {
-        val joinType = when (joinTypeContext.text.uppercase()) {
-            "INNER" -> JoinType.INNER
-            "LEFT" -> JoinType.LEFT
-            "RIGHT" -> JoinType.RIGHT
-            "FULL" -> JoinType.FULL
-            else -> throw IllegalArgumentException("Unknown join type: ${joinTypeContext.text}")
+        val joinTypeText = joinTypeContext.text.uppercase()
+        val (joinType, isOuter) = when (joinTypeText) {
+            "INNER" -> JoinType.INNER to false
+            "LEFT" -> JoinType.LEFT to false
+            "RIGHT" -> JoinType.RIGHT to false
+            "FULL" -> JoinType.FULL to false
+            "LEFTOUTER" -> JoinType.LEFT to true
+            "FULLOUTER" -> JoinType.FULL to true
+            else -> throw IllegalArgumentException("Unknown join type: $joinTypeText")
         }
-        val isOuter = joinTypeContext.OUTER_P() != null
-        return Ast_QualifiedJoinOperator(joinTypeContext, joinType, isOuter)
+        val hasExplicitOuter = joinTypeContext.OUTER_P() != null
+        return Ast_QualifiedJoinOperator(joinTypeContext, joinType, isOuter || hasExplicitOuter)
     }
 
     fun parseJoinCondition(joinQualContext: RedshiftSqlParser.Join_qualContext): Ast_JoinCondition {

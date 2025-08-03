@@ -61,3 +61,4 @@ wkdir-*/
 ### Local env config
 .envrc
 .claude/settings.local.json
+agent-notes.txt

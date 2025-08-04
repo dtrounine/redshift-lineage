@@ -1042,7 +1042,15 @@ class AstParser {
         )
     }
 
-    private fun parseCreateStatement(createTableContext: RedshiftSqlParser.CreatestmtContext): Ast_CreateTableStatement {
+    private fun parseCreateStatement(createStmtContext: RedshiftSqlParser.CreatestmtContext): Ast_Statement {
+        return when (createStmtContext) {
+            is RedshiftSqlParser.CreateTableStatementContext -> parseCreateTableStatement(createStmtContext)
+            is RedshiftSqlParser.CreateViewStatementContext -> parseCreateViewStatement(createStmtContext)
+            else -> throw IllegalArgumentException("Unknown create statement type: ${createStmtContext.javaClass.simpleName}")
+        }
+    }
+
+    private fun parseCreateTableStatement(createTableContext: RedshiftSqlParser.CreateTableStatementContext): Ast_CreateTableStatement {
         val ifNotExists = createTableContext.EXISTS() != null
         val isTemporary = createTableContext.opttemp() != null
         val tableFqn = parseQualifiedName(createTableContext.qualified_name())
@@ -1080,6 +1088,18 @@ class AstParser {
             }
             else -> throw IllegalArgumentException("Unknown create table statement type: ${rest.javaClass.simpleName}")
         }
+    }
+
+    private fun parseCreateViewStatement(createViewContext: RedshiftSqlParser.CreateViewStatementContext): Ast_CreateViewAsSelect {
+        val orReplace = createViewContext.REPLACE() != null
+        val viewFqn = parseQualifiedName(createViewContext.qualified_name())
+        val selectStatement = parseSelectStatement(createViewContext.selectstmt())
+        return Ast_CreateViewAsSelect(
+            createViewContext,
+            viewFqn,
+            orReplace,
+            selectStatement
+        )
     }
 
     private fun parseQualifiedName(qualifiedNameContext: RedshiftSqlParser.Qualified_nameContext): String {

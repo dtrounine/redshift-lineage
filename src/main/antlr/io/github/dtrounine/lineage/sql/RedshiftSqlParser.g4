@@ -204,7 +204,8 @@ insert_rest
 
 
 createstmt
-    : CREATE opttemp? TABLE (IF_P NOT EXISTS)? qualified_name createstmt_rest_
+    : CREATE opttemp? TABLE (IF_P NOT EXISTS)? qualified_name createstmt_rest_   # CreateTableStatement
+    | CREATE (OR REPLACE)? VIEW qualified_name AS selectstmt                    # CreateViewStatement
     ;
 
 createstmt_rest_

@@ -98,4 +98,5 @@ interface AstVisitor {
     fun visitAst_NestedSelectStatementClause(stmt: Ast_NestedSelectStatementClause)
     fun visitAst_WithClause(with: Ast_WithClause)
     fun visitAst_AlterTableRenameStatement(stmt: Ast_AlterRenameTableStatement)
+    fun visitAst_CreateViewAsSelect(stmt: Ast_CreateViewAsSelect)
 }

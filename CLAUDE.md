@@ -15,7 +15,8 @@ This is a CLI tool that extracts table-level lineage information from Redshift S
 - `./gradlew install` - Install the built binary to the build/install directory
 
 **Run:**
-Note: when developing, it's recommended to run `./gradlew install` first before running the tool.
+Note: when developing or testing, it's recommended to run `./gradlew install` first before running the tool. 
+The binary will be available in `build/install/redshift-lineage/bin/redshift-lineage`.
 - `./build/install/redshift-lineage/bin/redshift-lineage --help` - Display help information
 - `./build/install/redshift-lineage/bin/redshift-lineage --in-file <path_to_sql_file>` - Run the tool on a specific SQL file
 - `echo "SELECT * FROM table1;" | ./build/install/redshift-lineage/bin/redshift-lineage` - Run the tool with SQL input from stdin
@@ -25,6 +26,9 @@ Note: when developing, it's recommended to run `./gradlew install` first before 
 - `./gradlew installDist` - Install as local distribution
 
 **Release Process:**
+- Always do releases from the main branch.
+- First, commit all uncommitted changes or add trailing files to `.gitignore`.
+- Then push the changes to the remote repository.
 - `./gradlew release` - Full release workflow (version bump, tag, commit, GitHub release)
 
 **Grammar Generation:**
@@ -98,3 +102,12 @@ Key dependencies:
 - kotlinx-serialization for JSON output
 - OpenLineage Java client for compatibility
 - KAML for YAML output
+
+## Git workflow
+
+The project uses a standard Git workflow:
+- Main branch is the stable release branch
+- Feature branches are created for new features or fixes
+- When feature or fix is complete, create a pull request to merge into main
+- Pull requests should be reviewed and approved before merging
+- When merging a PR to the main branch, squash commits to keep history clean and linear, don't use merge commits

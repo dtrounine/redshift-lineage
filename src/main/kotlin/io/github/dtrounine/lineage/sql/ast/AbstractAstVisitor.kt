@@ -212,4 +212,7 @@ abstract class AbstractAstVisitor: AstVisitor {
 
     override fun visitAst_AlterTableRenameStatement(stmt: Ast_AlterRenameTableStatement) {
     }
+
+    override fun visitAst_CreateViewAsSelect(stmt: Ast_CreateViewAsSelect) {
+    }
 }

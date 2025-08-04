@@ -863,3 +863,15 @@ data class Ast_AlterRenameTableStatement(
         visitor.visitAst_AlterTableRenameStatement(this)
     }
 }
+
+data class Ast_CreateViewAsSelect(
+    override val context: ParserRuleContext,
+    val viewName: String,
+    val orReplace: Boolean,
+    val selectStatement: Ast_SelectStatement
+): Ast_Statement(context) {
+    override fun accept(visitor: AstVisitor) {
+        visitor.visitAst_CreateViewAsSelect(this)
+        selectStatement.accept(visitor)
+    }
+}

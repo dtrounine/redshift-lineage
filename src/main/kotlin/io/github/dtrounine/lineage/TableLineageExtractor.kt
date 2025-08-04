@@ -104,6 +104,7 @@ class TableLineageExtractor {
             is Ast_InsertStatement -> getInsertLineage(statement)
             is Ast_DeleteStatement -> getDeleteLineage(statement)
             is Ast_CreateTableAsSelect -> getCreateAsSelectLineage(statement)
+            is Ast_CreateViewAsSelect -> getCreateViewAsSelectLineage(statement)
             is Ast_AlterRenameTableStatement -> getAlterRenameTableLineage(statement)
             else -> LineageInfo.newEmpty()
         }
@@ -272,6 +273,16 @@ class TableLineageExtractor {
         val sourcesLineage = getSelectLineage(create.selectStatement)
         val createLineage = LineageInfo(
             lineage = mapOf(targetTable to sourcesLineage.sources),
+            sources = sourcesLineage.sources
+        )
+        return createLineage.mergeOnlyLineage(sourcesLineage)
+    }
+
+    private fun getCreateViewAsSelectLineage(create: Ast_CreateViewAsSelect): LineageInfo {
+        val targetView = create.viewName
+        val sourcesLineage = getSelectLineage(create.selectStatement)
+        val createLineage = LineageInfo(
+            lineage = mapOf(targetView to sourcesLineage.sources),
             sources = sourcesLineage.sources
         )
         return createLineage.mergeOnlyLineage(sourcesLineage)

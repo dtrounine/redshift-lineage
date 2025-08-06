@@ -55,6 +55,7 @@ tmp/
 run-sql-tests.sh
 test_data/
 test_data.zip
+test-*/
 wkdir-*/
 
 ### Local env config

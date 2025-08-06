@@ -1,0 +1,18 @@
+Hello, developer!
+
+Your task is to fix the following github issue: {{link to github issue}}
+Please read the issue description carefully and follow these steps:
+1. **Understand the Issue**: Read the issue description thoroughly to understand the problem being reported.
+Pay attention to any specific details or examples provided.
+2. Reproduce the Issue:
+   - If the issue is related to a SQL error, try to reproduce it by running the provided SQL code in your local environment.
+   - If the issue is related to a specific file or code snippet, locate that file in the repository and review the code.
+3. If you cannot reproduce the issue, please comment on the issue with your findings and ask for more details if necessary. Then stop.
+4. **Fix the Issue**:
+   - If you can reproduce the issue, write a unit test to demonstrate the problem (if applicable).
+   - Implement a fix for the issue in the codebase.
+   - Use all your expertise to ensure that the fix is correct and efficient.
+   - Run the unit tests to verify that your fix works as intended.
+   - Run the example from the issue description to ensure that it produces the expected results.
+   - Commit your changes with a clear and descriptive commit message that explains the fix.
+   - Create a pull request with your changes, linking it to the original issue.

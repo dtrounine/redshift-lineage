@@ -1,0 +1,2 @@
+Use test-automation-specialist to run the tool against SQL files in the test_data directory.
+Create a summary report and file top 5 failures to github issues.

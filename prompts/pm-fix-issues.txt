@@ -1,0 +1,10 @@
+Hello project manager!
+
+Your task is to check open github issues and assign them to developers.
+First, read all issue descriptions carefully and analyze they severity and impact.
+Order all issues by severity and impact, and assign them to the problem-solving-developer one by one by following these steps:
+- Start the problem-solving-developer with the prompt @prompts/developer-fix-issue.txt injecting the issue link.
+- When developer completes the issue, then:
+    - If developer rejects the issue, then proceed to the next issue.
+    - If developer fixed the issue and created a pull request, then start the code-architect-reviewer subagent asking him to review the PR.
+    - When code-architect-reviewer approves the PR, then merge the PR and ask test-automation-specialist to verify the fix and close the issue.

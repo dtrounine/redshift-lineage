@@ -210,8 +210,8 @@ createstmt
 
 createstmt_rest_
     : OPEN_PAREN opttableelementlist? CLOSE_PAREN table_attributes?  # CreateStmtColumns
-    | AS OPEN_PAREN selectstmt CLOSE_PAREN                           # CreateStmtAsSelect
-    | AS selectstmt                                                  # CreateStmtAsSelectNoParens
+    | table_attributes? AS OPEN_PAREN selectstmt CLOSE_PAREN         # CreateStmtAsSelect
+    | table_attributes? AS selectstmt                                # CreateStmtAsSelectNoParens
     ;
 
 opttemp
